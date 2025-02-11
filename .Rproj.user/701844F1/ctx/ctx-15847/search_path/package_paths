@@ -1,0 +1,8 @@
+datasets="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/datasets"
+grDevices="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/grDevices"
+graphics="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/graphics"
+methods="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/methods"
+srdeploy="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/srdeploy"
+stats="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/stats"
+testthat="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/testthat"
+utils="C:/Users/arose/AppData/Local/Programs/R/R-4.3.1/library/utils"

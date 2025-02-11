@@ -1,0 +1,21 @@
+hello <- function() {
+print("Hello, world!")
+}
+hello <- function(digit) {
+pi <- 3.141529
+print(paste("The ", digit, " of pi is: ", pi))
+}
+usethis::use_testthat()
+use_test()
+library(testthat)
+library(srdeploy)
+library(srdeploy)
+test_check("srdeploy")
+library(srdeploy)
+library(testthat)
+library(srdeploy)
+test_check("srdeploy")
+srdeploy::hello(4)
+library(srdeploy)
+test_check("srdeploy")
+devtools::install_github("AaronRoseDA/srlib")
