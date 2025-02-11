@@ -1,0 +1,26 @@
+{
+    "id": "AC86E765",
+    "path": "~/srdeploy/R/hello.R",
+    "project_path": "R/hello.R",
+    "type": "r_source",
+    "hash": "2595549581",
+    "contents": "",
+    "dirty": true,
+    "created": 1739292547632.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "19,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1739293326,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1739293797365,
+    "read_only": false,
+    "read_only_alternatives": []
+}
