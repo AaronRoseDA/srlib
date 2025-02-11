@@ -1,0 +1,6 @@
+install.packages("devtools")
+devtools::install_github("AaronRoseDA/srlib")
+
+library(srdeploy)
+
+srdeploy::generate_distribution_metrics(num_distributions = 1000,samples_per_dist = 500,dist_type = "normal")
