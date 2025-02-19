@@ -1,7 +1,7 @@
 
 
 .onLoad <- function(libname, pkgname) {
-  required_packages <- c("moments", "gramEvol", "dplyr")
+  required_packages <- c("moments", "gramEvol", "dplyr", "odbc", "DBI")
 
   # Function to check and install missing packages
   check_install_packages <- function(pkg) {
@@ -170,8 +170,21 @@ symbolic_regression <- function(data,
 }
 
 
-# GIT PUSH HELPER
-# git remote set-url origin https://github.com/AaronRoseDA/srlib.git
-# git add .
-# git commit -m "Added symbolic_regression function"
-# git push origin main
+
+another_test_func <- function(n = 20){
+  return(rnorm(n = n,mean = 0,sd = n/exp(1)))
+}
+
+
+# # GIT CLONE HELPER:
+# cd path\to\folder  # Navigate to the target directory
+# git clone https://github.com/AaronRoseDA/srlib.git  # Clone the repository
+# cd srlib  # Move into the cloned repo directory
+#
+#
+# # GIT PUSH HELPER:
+# git remote set-url origin https://github.com/AaronRoseDA/srlib.git  # Set remote origin (only needed if not set)
+# git pull origin main  # Ensure your local branch is up-to-date
+# git add .  # Stage all changes
+# git commit -m "Added symbolic_regression function"  # Commit changes
+# git push origin main  # Push to the main branch
