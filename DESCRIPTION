@@ -15,4 +15,7 @@ Config/testthat/edition: 3
 Imports:
     moments,
     gramEvol,
-    dplyr
+    dplyr,
+    odbc,
+    DBI
+RoxygenNote: 7.2.3

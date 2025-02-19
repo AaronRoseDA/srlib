@@ -15,24 +15,44 @@
   invisible(lapply(required_packages, check_install_packages))
 }
 
-hello <- function(digit) {
-  # Use R's built-in pi constant
-  pi_str <- as.character(pi)
-  pi_digits <- gsub("\\.", "", pi_str)  # Remove the decimal point
 
-  # Ensure digit is within valid range
-  if (digit < 1 || digit > nchar(pi_digits)) {
-    return("Digit out of range. Try a smaller number.")
-  }
-
-  # Extract the requested digit
-  selected_digit <- substr(pi_digits, digit, digit)
-
-  # Return the result
-  paste("The", digit, "digit of pi is:", selected_digit)
-}
-
-
+#' Generate Distribution Metrics
+#'
+#' This function generates random distributions of a specified type and computes
+#' key statistical metrics such as mean, standard deviation, skewness, and entropy.
+#'
+#' @param num_distributions An integer specifying the number of distributions to generate (default: 1000).
+#' @param samples_per_dist An integer specifying the number of samples per distribution (default: 500).
+#' @param dist_type A string specifying the type of distribution to generate.
+#'        Options include `"log-normal"`, `"normal"`, `"uniform"`, and `"exponential"`.
+#'
+#' @return A data frame containing computed metrics for each generated distribution.
+#'         Columns include:
+#'         - `distNbr`: Distribution number (1 to `num_distributions`).
+#'         - `distType`: Type of distribution generated.
+#'         - `mu`: Mean parameter used for generating the distribution.
+#'         - `sigma`: Standard deviation parameter used for generating the distribution.
+#'         - `n`: Number of samples in each distribution.
+#'         - `xbar`: Sample mean (log-transformed where applicable).
+#'         - `std`: Sample standard deviation.
+#'         - `skew`: Sample skewness.
+#'         - `entropy`: Entropy (for log-normal and normal distributions).
+#'
+#' @examples
+#' # Generate 100 distributions with 500 samples each (default settings)
+#' metrics_df <- generate_distribution_metrics()
+#'
+#' # Generate 500 normal distributions with 1000 samples per distribution
+#' normal_metrics <- generate_distribution_metrics(num_distributions = 500,
+#'                                                 samples_per_dist = 1000,
+#'                                                 dist_type = "normal")
+#'
+#' # Generate 200 exponential distributions with 250 samples per distribution
+#' exp_metrics <- generate_distribution_metrics(num_distributions = 200,
+#'                                              samples_per_dist = 250,
+#'                                              dist_type = "exponential")
+#'
+#' @export
 generate_distribution_metrics <- function(num_distributions = 1000,
                                           samples_per_dist = 500,
                                           dist_type = c("log-normal", "normal", "uniform", "exponential")) {
@@ -103,6 +123,40 @@ generate_distribution_metrics <- function(num_distributions = 1000,
 }
 
 
+#' Perform Symbolic Regression using Grammatical Evolution
+#'
+#' This function applies symbolic regression to find an optimal mathematical expression
+#' that approximates entropy based on input variables using grammatical evolution.
+#'
+#' @param data A data frame containing at least the following columns:
+#'        `"mu"`, `"sigma"`, `"xbar"`, and `"entropy"`.
+#' @param termination_cost A numeric value specifying the termination cost for the evolution process (default: 0.05).
+#' @param optimizer A string specifying the optimization algorithm to use (default: `"es"`).
+#' @param iterations An integer specifying the number of iterations for the evolution process (default: 3e6).
+#' @param seed An integer used for random number generation to ensure reproducibility (default: 2).
+#'
+#' @return A list containing:
+#'         - `best_expression`: The best mathematical expression found.
+#'         - `runtime`: Execution time of the symbolic regression process.
+#'         - `iterations`: The number of iterations performed.
+#'         - `optimizer`: The optimization method used.
+#'
+#' @examples
+#' # Generate sample data
+#' sample_data <- data.frame(
+#'   mu = runif(100, 1, 10),
+#'   sigma = runif(100, 1, 5),
+#'   xbar = rnorm(100, 5, 2),
+#'   entropy = rexp(100, rate = 0.5)
+#' )
+#'
+#' # Perform symbolic regression
+#' result <- symbolic_regression(sample_data)
+#'
+#' # View best expression found
+#' print(result$best_expression)
+#'
+#' @export
 symbolic_regression <- function(data,
                                 termination_cost = 0.05,
                                 optimizer = "es",
@@ -167,12 +221,6 @@ symbolic_regression <- function(data,
     iterations = iterations,
     optimizer = optimizer
   ))
-}
-
-
-
-another_test_func <- function(n = 20){
-  return(rnorm(n = n,mean = 0,sd = n/exp(1)))
 }
 
 
