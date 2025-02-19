@@ -183,6 +183,7 @@ another_test_func <- function(n = 20){
 #
 #
 # # GIT PUSH HELPER:
+# cd srlib
 # git remote set-url origin https://github.com/AaronRoseDA/srlib.git  # Set remote origin (only needed if not set)
 # git pull origin main  # Ensure your local branch is up-to-date
 # git add .  # Stage all changes
