@@ -2,7 +2,7 @@
 
 .onLoad <- function(libname, pkgname) {
   required_packages <- c("moments", "gramEvol", "dplyr", "odbc", "DBI")
-
+  options(repos = c(CRAN = "https://cran.rstudio.com/"))
   # Function to check and install missing packages
   check_install_packages <- function(pkg) {
     if (!requireNamespace(pkg, quietly = TRUE)) {
