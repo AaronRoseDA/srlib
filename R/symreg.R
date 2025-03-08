@@ -1,7 +1,7 @@
 
 
 .onLoad <- function(libname, pkgname) {
-  required_packages <- c("moments", "gramEvol", "dplyr", "odbc", "DBI", "e1071")
+  required_packages <- c("moments", "gramEvol", "dplyr", "odbc", "DBI", "e1071", "parallel")
   options(repos = c(CRAN = "https://cran.rstudio.com/"))
   # Function to check and install missing packages
   check_install_packages <- function(pkg) {

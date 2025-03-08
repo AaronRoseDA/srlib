@@ -17,5 +17,6 @@ Imports:
     gramEvol,
     dplyr,
     odbc,
-    DBI
+    DBI,
+    parallel
 RoxygenNote: 7.2.3
