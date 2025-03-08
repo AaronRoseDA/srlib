@@ -15,42 +15,54 @@
   invisible(lapply(required_packages, check_install_packages))
 }
 
-#####
+##### ---- ROXYGEN ---- #####
 #' Generate Distribution Metrics
 #'
-#' This function generates random distributions of a specified type and computes
-#' key statistical metrics such as mean, standard deviation, skewness, and entropy.
+#' This function generates synthetic data for different probability distributions and calculates
+#' key metrics such as mean (`mu`), standard deviation (`sigma`), skewness, and entropy.
 #'
-#' @param num_distributions An integer specifying the number of distributions to generate (default: 1000).
-#' @param samples_per_dist An integer specifying the number of samples per distribution (default: 500).
-#' @param dist_type A string specifying the type of distribution to generate.
-#'        Options include `"log-normal"`, `"normal"`, `"uniform"`, and `"exponential"`.
+#' @param num_distributions Integer. The number of distributions to generate (default: `1000`).
+#' @param samples_per_dist Integer. The number of samples per generated distribution (default: `500`).
+#' @param dist_type Character. Specifies the type of distribution to generate. Options include:
+#'   - `"normal"`: Generates normal distributions.
+#'   - `"log-normal"`: Generates log-normal distributions.
+#'   - `"uniform"`: Generates uniform distributions.
+#'   - `"exponential"`: Generates exponential distributions.
+#' @param a Numeric or `FALSE`. The lower bound for uniform distributions. If `FALSE`, a random value is used.
+#' @param b Numeric or `FALSE`. The upper bound for uniform distributions. If `FALSE`, a random value is used.
 #'
-#' @return A data frame containing computed metrics for each generated distribution.
-#'         Columns include:
-#'         - `distNbr`: Distribution number (1 to `num_distributions`).
-#'         - `distType`: Type of distribution generated.
-#'         - `mu`: Mean parameter used for generating the distribution.
-#'         - `sigma`: Standard deviation parameter used for generating the distribution.
-#'         - `n`: Number of samples in each distribution.
-#'         - `xbar`: Sample mean (log-transformed where applicable).
-#'         - `std`: Sample standard deviation.
-#'         - `skew`: Sample skewness.
-#'         - `entropy`: Entropy (for log-normal and normal distributions).
+#' @return A `data.frame` containing the following columns:
+#'   \describe{
+#'     \item{`distNbr`}{The index number of the generated distribution.}
+#'     \item{`distType`}{The type of distribution generated (`"normal"`, `"log-normal"`, `"uniform"`, or `"exponential"`).}
+#'     \item{`n`}{The number of samples in each distribution.}
+#'     \item{`mu`}{The calculated mean of the generated distribution.}
+#'     \item{`sigma`}{The standard deviation of the generated distribution.}
+#'     \item{`skew`}{The skewness of the generated distribution.}
+#'     \item{`entropy`}{The entropy of the distribution, calculated using theoretical formulas.}
+#'     \item{`lambda`}{(For exponential distributions) The rate parameter.}
+#'     \item{`a`}{(For uniform distributions) The lower bound.}
+#'     \item{`b`}{(For uniform distributions) The upper bound.}
+#'   }
+#'
+#' @details
+#' This function internally calls specialized sub-functions for each distribution type:
+#' \itemize{
+#'   \item `generateNormalDistributions()`
+#'   \item `generateLognormalDistributions()`
+#'   \item `generateUniformDistributions()`
+#'   \item `generateExponentialDistributions()`
+#' }
+#' These sub-functions generate random samples and compute distribution-specific statistics.
 #'
 #' @examples
-#' # Generate 100 distributions with 500 samples each (default settings)
-#' metrics_df <- generate_distribution_metrics()
+#' \dontrun{
+#'   # Generate metrics for 500 normal distributions with 1000 samples each
+#'   normal_data <- generate_distribution_metrics(500, 1000, "normal")
 #'
-#' # Generate 500 normal distributions with 1000 samples per distribution
-#' normal_metrics <- generate_distribution_metrics(num_distributions = 500,
-#'                                                 samples_per_dist = 1000,
-#'                                                 dist_type = "normal")
-#'
-#' # Generate 200 exponential distributions with 250 samples per distribution
-#' exp_metrics <- generate_distribution_metrics(num_distributions = 200,
-#'                                              samples_per_dist = 250,
-#'                                              dist_type = "exponential")
+#'   # Generate 200 uniform distributions with predefined bounds
+#'   uniform_data <- generate_distribution_metrics(200, 500, "uniform", a = 0, b = 10)
+#' }
 #'
 #' @export
 #####
@@ -60,7 +72,7 @@ generate_distribution_metrics <- function(num_distributions = 1000,
 
   generateNormalDistributions <- function(num_distributions = 1000,
                                           samples_per_dist = 500,
-                                          mu_sd = 1, sigma_max = 10) {
+                                          mu_max = 100000, sigma_max = 100000) {
     # Create an empty results data frame
     results_df <- data.frame(
       distNbr  = integer(num_distributions),
@@ -77,7 +89,7 @@ generate_distribution_metrics <- function(num_distributions = 1000,
     for (i in seq_len(num_distributions)) {
 
       # -- CHOOSE TRUE PARAMETERS (mu_i, sigma_i) --
-      mu_i    <- rnorm(1, mean = 0, sd = mu_sd)
+      mu_i    <- runif(1, min = 0, max = mu_max)
       sigma_i <- runif(1, min = 0.5, max = sigma_max)
 
       # -- GENERATE SAMPLES --
@@ -274,201 +286,174 @@ generate_distribution_metrics <- function(num_distributions = 1000,
 }
 
 
-
-
-
-{
-#' Perform Symbolic Regression using Grammatical Evolution TEST TEST TEST
+##### ---- ROXYGEN ---- #####
+#' Evaluate the Fitness of a Symbolic Regression Expression
 #'
-#' This function applies symbolic regression to find an optimal mathematical expression
-#' that approximates entropy based on input variables using grammatical evolution.
+#' This function evaluates the fitness of a given expression in the context of symbolic regression.
+#' The function calculates the mean log error between the predicted values (evaluated from the expression)
+#' and the known entropy values in the dataset.
 #'
-#' @param data A data frame containing at least the following columns:
-#'        `"mu"`, `"sigma"`, `"xbar"`, and `"entropy"`.
-#' @param termination_cost A numeric value specifying the termination cost for the evolution process (default: 0.05).
-#' @param optimizer A string specifying the optimization algorithm to use (default: `"es"`).
-#' @param iterations An integer specifying the number of iterations for the evolution process (default: 3e6).
-#' @param seed An integer used for random number generation to ensure reproducibility (default: 2).
+#' @param expr A character string representing a mathematical expression to be evaluated.
+#'             The expression should reference variables present in the dataset (`data`).
 #'
-#' @return A list containing:
-#'         - `best_expression`: The best mathematical expression found.
-#'         - `runtime`: Execution time of the symbolic regression process.
-#'         - `iterations`: The number of iterations performed.
-#'         - `optimizer`: The optimization method used.
+#' @return A numeric value representing the fitness (cost) of the expression.
+#'         Lower values indicate better fitness, while `Inf` is returned if the result contains `NaN` values.
+#'
+#' @details
+#' The function first evaluates the given expression using `eval(parse(text = expr))`.
+#' If the evaluation results in any `NaN` values, the function returns `Inf`, indicating an invalid solution.
+#' Otherwise, the function computes the mean log error using:
+#' \deqn{\text{cost} = \text{mean}(\log(1 + | \text{data\$entropy} - \text{result} |))}
 #'
 #' @examples
-#' # Generate sample data
-#' sample_data <- data.frame(
-#'   mu = runif(100, 1, 10),
-#'   sigma = runif(100, 1, 5),
-#'   xbar = rnorm(100, 5, 2),
-#'   entropy = rexp(100, rate = 0.5)
-#' )
+#' \dontrun{
+#'   data <- generate_distribution_metrics(10, 1000000, "normal")
 #'
-#' # Perform symbolic regression
-#' result <- symbolic_regression(sample_data)
-#'
-#' # View best expression found
-#' print(result$best_expression)
+#'   expr <- "log(data$b - log(exp(data$a)))"
+#'   cost <- SymRegFitFunc(expr)
+#'   print(cost)
+#' }
 #'
 #' @export
+#####
+SymRegFitFunc <- function(expr) {
+  # print(expr)
+  result <-unlist(eval(parse(text = expr)))
+  if (any(is.nan(result))) {
+    return(Inf)
+  }
+  mean(log(1 + abs(data$entropy - result)))
 }
-symbolic_regression <- function(data,
-                                termination_cost = 0.05,
+
+
+##### --- ROXYGEN ---- #####
+#' Perform Symbolic Regression using Grammatical Evolution
+#'
+#' This function performs symbolic regression using Grammatical Evolution (GE).
+#' It allows the user to define a grammar, an evaluation function, and various
+#' optimization settings to evolve mathematical expressions that fit a given dataset.
+#'
+#' @param grammarDef A list containing the grammar definition, variable names, and additional metadata.
+#'                   This should include:
+#'                   - `name`: A character vector of variable names.
+#'                   - `variables`: A vector of variables included in the regression.
+#'                   - `grammarDef`: The formal grammar object used for GE.
+#' @param evalFunc A function that evaluates the cost of an expression.
+#'                 It should accept an expression as input and return a numeric cost.
+#' @param termination_cost Numeric. The stopping criteria for evolution.
+#'                         If the best cost reaches this value, evolution stops. Default is `NA` (no early stopping).
+#' @param optimizer Character. The optimization method to use. Options are:
+#'                  - `"es"`: Evolution Strategy (default).
+#'                  - `"ga"`: Genetic Algorithm.
+#'                  - `"random"`: Randomly selects between `"es"` and `"ga"`, with special handling for iterations.
+#' @param iterations Integer. Number of iterations to run the evolutionary process (default: `200`).
+#'                   If `optimizer = "random"` and `"es"` is chosen, iterations increase by 10x.
+#' @param suggestions A matrix of suggested genomes to initialize the evolution process.
+#'                    If `optimizer = "es"`, only the first row is used.
+#' @param mutationChance Numeric. Mutation probability in the evolutionary algorithm.
+#'                       If `"random"`, a random value in `[0,1]` is chosen.
+#'                       Default is `-0.8`, which might need clarification or adjustment.
+#' @param verbose Logical. If `TRUE`, prints real-time updates of the evolutionary process (default: `FALSE`).
+#'
+#' @return A list with the following elements:
+#'   \describe{
+#'     \item{`output_table`}{A `data.frame` containing the best discovered expression and associated metadata:
+#'       \itemize{
+#'         \item `distribution`: The name of the dataset distribution.
+#'         \item `optimizer`: Optimization method used.
+#'         \item `best_expression`: The best expression found.
+#'         \item `best_cost`: The best cost achieved.
+#'         \item `iterations`: The number of iterations performed.
+#'         \item `seed`: The random seed used.
+#'         \item `mutationChance`: The mutation probability used.
+#'         \item `runtime`: The total execution time.
+#'       }}
+#'     \item{`results_table`}{A `data.frame` containing detailed iteration-wise results:
+#'       \itemize{
+#'         \item `distribution`: The dataset distribution.
+#'         \item `optimizer`: The optimization method used.
+#'         \item `expression`: The best expression at a given iteration.
+#'         \item `cost`: The corresponding cost.
+#'         \item `iterations`: The current iteration number.
+#'         \item `mutationChance`: The mutation probability used.
+#'         \item `seed`: The random seed used.
+#'       }}
+#'     \item{`results`}{A list containing detailed evolution process snapshots at each step.}
+#'     \item{`best_genome`}{A numeric matrix containing the best genome representation.}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#'
+#'  data <- generate_distribution_metrics(100, 1000000, "normal")
+#'  grammarDef <- create_grammar_wrapper(data, variables = c('sigma'))
+#'
+#'  SymRegFitFunc <- function(expr) {
+#'    result <-unlist(eval(parse(text = expr)))
+#'    if (any(is.nan(result))) {
+#'      return(Inf)
+#'    }
+#'    mean(log(1 + abs(data$entropy - result)))
+#'  }
+#'
+#' result <-
+#'   symbolic_regression(
+#'     grammarDef = grammarDef,
+#'     evalFunc = SymRegFitFunc,
+#'     iterations = 50,
+#'     optimizer = 'ga',
+#'     verbose = TRUE,
+#'     termination_cost = .1
+#'   )
+#' }
+#' @export
+#####
+symbolic_regression <- function(grammarDef,
+                                evalFunc,
+                                termination_cost = NA,
                                 optimizer = "es",
-                                iterations = 3e6,
-                                seed = 2) {
-  # dataN = generate_distribution_metrics(dist_type = "normal",num_distributions = 10,samples_per_dist = 10000000)
-  # dataE = generate_distribution_metrics(dist_type = "exponential",num_distributions = 10,samples_per_dist = 10000000)
-  # dataU = generate_distribution_metrics(dist_type = "uniform",num_distributions = 10,samples_per_dist = 10000000)
+                                iterations = 200,
+                                suggestions = NULL,
+                                mutationChance = -.8,
+                                verbose = FALSE) {
 
-  # termination_cost = 0.05
-  # optimizer = "ga"
-  # iterations = 3e6
-  # seed = 2
+  if (optimizer == "random") {
+    optimizer <- sample(c("es","ga"),size = 1)
+    if (optimizer == "es") {
+      iterations <- iterations * 10
+      if (!is.null(suggestions)) {
+        suggestions <- suggestions[1, ]
 
-  # Set seed for reproducibility
+      }
+    }
+  }
+  if (!is.na(mutationChance) & mutationChance == "random") {
+    mutationChance <- runif(1,0,1)
+  }
+
+
+  variablesName <- grammarDef$name
+  variables <- grammarDef$variables
+  grammarDef <- grammarDef$grammarDef
+  known_entropy <- data$entropy
+
+
+  variables <- c(variables)
+
+  seed <- round(runif(1,1,2147483647))
   set.seed(seed)
 
-  SymRegFitFunc <- function(expr) {
-    result <- eval(expr)
-    if (any(is.nan(result))) return(Inf)
-    return(mean(log(1 + abs(known_entropy - result))))
-  }
-
-  # Validate input data
-  if (!all(c("mu", "sigma", "entropy") %in% colnames(data))) {
-    stop("Input data must contain columns: 'mu', 'sigma', 'entropy'")
-  }
-
-  ### REMOVE
-  data <- dataU
-  # Extract relevant columns
-  if(data$distType[1] == "uniform"){
-    a <- data$a
-    b <- data$b
-    known_entropy <- data$entropy
-
-    # Define grammar rules
-    ruleDef <- list(
-      expr = grule(op(expr, expr), func(expr), var),
-      func = grule(log, sqrt),
-      op = grule("+", "-", "*", "/", "^"),
-      var = grule(a, b),
-      n = grule(1, 2, 3)
-    )
-    # Create the grammar definition
-    grammarDef <- CreateGrammar(ruleDef)
-
-  }
-
-
-  ### REMOVE
-  data <- dataE
-  if(data$distType[1] == "exponential"){
-    lambda <- data$lambda
-    known_entropy <- data$entropy
-
-    # Define grammar rules
-    ruleDef <- list(
-      expr = grule(op(expr, expr), func(expr), var),
-      func = grule(log, sqrt),
-      op = grule("+", "-", "*", "/", "^"),
-      var = grule(lambda, 1,2),
-      n = grule(1, 2, 3)
-    )
-    # Create the grammar definition
-    grammarDef <- CreateGrammar(ruleDef)
-
-  }
-
-
-  ### REMOVE
-  data <- dataN
-  if (data$distType[1] == "normal") {
-    sigma <- data$sigma
-    known_entropy <- data$entropy
-
-    # Define grammar rules
-    ruleDef <- list(
-      expr = grule(op(expr, expr), func(expr), var),
-      func = grule(log, sqrt, exp),
-      op   = grule("+", "-", "*", "/", "^"),
-      var  = grule(sigma, 1, 2, pi)
-    )
-
-    # Create the grammar definition
-    grammarDef <- CreateGrammar(ruleDef)
-  }
-
-  # termination_cost = 0.01
-  # optimizer = "ga"
-  # iterations = 3e6
-  # seed = 2
-  #
-  # # Set seed for reproducibility
-  # set.seed(seed)
-
-  # ------------------------------------------------------------------
-  # Cost (fitness) function
-  SymRegFitFunc <- function(expr) {
-    result <- eval(expr)
-    if (any(is.nan(result))) {
-      return(Inf)
-    }
-    mean(log(1 + abs(known_entropy - result)))
-  }
-
-  # ------------------------------------------------------------------
-  # Parallel lapply function
-  # myplapply <- function(X, FUN,...) {
-  #   cl <- parallel::makeCluster(parallel::detectCores() - 1)
-  #   on.exit(parallel::stopCluster(cl))
-  #
-  #   # Export only what the cost function needs on each worker
-  #   parallel::clusterExport(
-  #     cl,
-  #     c("SymRegFitFunc", "sigma", "known_entropy"),
-  #     envir = environment()
-  #   )
-  #
-  #   # Load libraries on each worker
-  #   parallel::clusterEvalQ(cl, {
-  #     library(gramEvol)
-  #     library(stats)
-  #   })
-  #
-  #   # Apply in parallel
-  #   parallel::parLapply(cl, X, FUN, ...)
-  # }
-
-  # ------------------------------------------------------------------
-
-  # results <- list()
-  # currentBest <- 1
-  # gramEvolution <- GrammaticalEvolution(
-  #   grammarDef      = grammarDef,
-  #   evalFunc        = SymRegFitFunc,
-  #   terminationCost = termination_cost,
-  #   optimizer       = optimizer,
-  #   iterations      = iterations,
-  #   mutationChance  = 0.1,
-  #
-  #   monitorFunc = function(x) {
-  #     if (x$best$cost < currentBest) {
-  #       print(x)
-  #       currentBest <<- x$best$cost
-  #       results[[length(results) + 1]] <<- list(x)
-  #       print(currentBest)
-  #     }
-  #   },
-  #   plapply = myplapply
-  # )
-
-
-
-
   results <- list()
+
+  results_table <- data.frame(
+    distribution = character(),
+    optimizer =  character(),
+    expression = character(),
+    cost = numeric(),
+    iterations = numeric(),
+    mutationChance = numeric(),
+    seed = numeric()
+  )
 
   # Start runtime tracking
   start_time <- Sys.time()
@@ -476,22 +461,41 @@ symbolic_regression <- function(data,
   # Run Grammatical Evolution
   gramEvolution <- GrammaticalEvolution(
     grammarDef,
-    SymRegFitFunc,
+    suggestions = suggestions,
+    evalFunc = evalFunc,
     terminationCost = termination_cost,
     optimizer = optimizer,
-    iterations = iterations,mutationChance = .1,
+    iterations = iterations,
+    mutationChance = mutationChance,
     monitorFunc = function(x) {
       if (x$best$cost < currentBest) {
-        print(x)
+        x$best$expressions <- gsub("data\\$", "", x$best$expressions)
+        if (verbose){
+          print(x, show.genome = TRUE)
+        }
+        best_output <<- x
         currentBest <<- x$best$cost
+        currentBestExpressions <<- x$best$expressions
         results[[length(results)+1]] <<- list(x)
-        print(currentBest)
+
+        results_table <<-
+          rbind(
+            results_table,
+            data.frame(
+              distribution = data$distType[1],
+              optimizer = optimizer,
+              expression = x$best$expressions,
+              cost = x$best$cost,
+              iterations = x$population$currentIteration,
+              mutationChance = mutationChance,
+              seed = seed
+            )
+          )
+        print(results_table)
+
       }
     }
   )
-
-  # resultsU <- results
-   # resultsE <- results
 
   # End runtime tracking
   end_time <- Sys.time()
@@ -500,22 +504,271 @@ symbolic_regression <- function(data,
   # Extract best expression
   best_expression <- gramEvolution$best$expression
 
+  output_table <- data.frame(
+    distribution = data$distType[1],
+    optimizer = optimizer,
+    best_expression = currentBestExpressions,
+    best_cost = currentBest,
+    iterations = best_output$population$currentIteration,
+    seed = seed,
+    mutationChance = mutationChance,
+    runtime = runtime
+  )
+
   # Return results
   return(list(
-    best_expression = best_expression,
-    runtime = runtime,
-    iterations = iterations,
-    optimizer = optimizer
+    output_table = output_table,
+    results_table = results_table,
+    results = results,
+    best_genome = matrix(c(currentBest, best_output[["best"]][["genome"]]),nrow = 1)
+  ))
+
+}
+
+
+##### --- ROXYGEN ---- #####
+#' Create a Grammar Definition for Symbolic Regression
+#'
+#' This function constructs a grammar definition for symbolic regression using Grammatical Evolution.
+#' It dynamically includes variables from the provided dataset and allows customization of operators and functions.
+#'
+#' @param data A `data.frame` containing the dataset used for symbolic regression.
+#' @param operators Character vector. Mathematical operators to include in the grammar (default: `c("+", "-", "*", "/", "^")`).
+#' @param functions List of functions to include in the grammar (default: `c(log, sqrt, exp)`).
+#' @param variables Character vector. Names of the columns in `data` to be included as variables in the grammar.
+#'
+#' @return A list containing:
+#'   \describe{
+#'     \item{`name`}{The symbolic representation of the selected variables.}
+#'     \item{`known_entropy`}{A vector containing the entropy values from `data$entropy`.}
+#'     \item{`grammarDef`}{The generated grammar definition for symbolic regression.}
+#'     \item{Dynamic Variables}{Additional named elements in the list, where each variable in `variables` is stored as a separate list element with corresponding values from `data`.}
+#'   }
+#'
+#' @details
+#' The function constructs a grammar by defining symbolic rules for mathematical expressions.
+#' It dynamically integrates variables from `data` while ensuring that constants (1, 2, π) are included in the grammar.
+#'
+#' @examples
+#' \dontrun{
+#'   grammar <- create_grammar_wrapper(
+#'     data = my_data,
+#'     variables = c("x", "y")
+#'   )
+#' }
+#'
+#' @export
+#####
+create_grammar_wrapper <- function(data,
+                                   operators = c("+", "-", "*", "/", "^"),
+                                   functions = c(log, sqrt, exp),
+                                   variables) {
+
+  ivCol <- variables  # Preserve variable names
+  variables <- syms(paste0("data$",ivCol))
+
+  # Define grammar rules
+  ruleDef <- list(
+    expr = grule(op(expr, expr), func(expr), var),
+    func = grule(log, sqrt, exp),  # Ensure function set includes `exp`
+    op = grule("+", "-", "*", "/", "^"),
+    var = do.call(grule, c(variables, list(1, 2, pi))),  # Dynamically unpack variable names
+    n = grule(1, 2, 3)
+  )
+
+  # Create the grammar definition
+  grammarDef <- CreateGrammar(ruleDef)
+
+  return(c(
+    list(
+      name = variables,
+      known_entropy = data$entropy,
+      grammarDef = grammarDef
+    ),
+    setNames(lapply(ivCol, function(col) data[[col]]), ivCol)  # Dynamically add multiple elements
   ))
 }
 
 
+##### --- ROXYGEN ---- #####
+#' Perform Parallel Symbolic Regression
+#'
+#' This function runs symbolic regression in parallel across multiple cores, leveraging
+#' `symbolic_regression()` for the evolutionary process on each core.
+#'
+#' @inheritParams symbolic_regression
+#' @param n_core Integer. The number of CPU cores to use for parallel execution (default: `4`).
+#'
+#' @return A list containing:
+#'   \describe{
+#'     \item{`output_table`}{A `data.frame` summarizing the best symbolic expressions found across parallel runs.}
+#'     \item{`results_table`}{A `data.frame` containing detailed iteration-wise results from all parallel runs.}
+#'     \item{`genome_matrix`}{A matrix containing the top 3 best genome representations sorted by fitness.}
+#'     \item{`output_raw`}{A list of raw outputs from each parallel execution of `symbolic_regression()`.}
+#'   }
+#'
+#' @details
+#' This function creates a parallel cluster and distributes the symbolic regression tasks
+#' across multiple cores. Each core runs `symbolic_regression()` independently on a copy
+#' of `grammarDef`. The results are then aggregated into structured output tables.
+#'
+#' @examples
+#' \dontrun{
+#'   result <- par_sym_reg(
+#'     symbolic_regression = symbolic_regression,
+#'     evalFunc = SymRegFitFunc,
+#'     grammarDef = grammarDef,
+#'     data = data,
+#'     n_core = 4
+#'   )
+#' }
+#'
+#' @export
+#####
+par_sym_reg <- function(symbolic_regression,  # Removed default evaluation
+                        evalFunc,
+                        grammarDef,
+                        data,  # Corrected argument order
+                        termination_cost = NA,
+                        optimizer = "es",
+                        iterations = 50,
+                        fit_func,
+                        verbose = FALSE,
+                        suggestions = NULL,
+                        mutationChance = NA,
+                        n_core = 4) {  # Moved n_core to the correct place
+  # Detect the number of available cores and create cluster
+  cl <- parallel::makeCluster(min(parallel::detectCores(), n_core))
+
+  grammarDefLong <- replicate(n_core, grammarDef, simplify = FALSE)
 
 
+  # Export necessary variables to the cluster
+  parallel::clusterExport(
+    cl,
+    c("symbolic_regression",
+      "evalFunc",
+      "grammarDef",
+      "termination_cost",
+      "optimizer",
+      "iterations",
+      "verbose",
+      "suggestions",
+      "mutationChance",
+      "data"),
+    envir = environment()
+  )
+
+  # Load required packages on worker nodes
+  parallel::clusterEvalQ(cl, {
+    library(gramEvol)
+  })
+
+  # Run parallel symbolic regression
+  opFromPar <- parallel::parLapply(
+    cl = cl,
+    fun = symbolic_regression,
+    X = grammarDefLong,
+    evalFunc = evalFunc,
+    termination_cost = termination_cost,
+    optimizer = optimizer,
+    iterations = iterations,
+    verbose = verbose,
+    suggestions = suggestions,
+    mutationChance = mutationChance
+  )
+
+  # Stop the cluster after execution
+  parallel::stopCluster(cl)
+
+  genome_list <- lapply(opFromPar, function(i) i$best_genome)
+
+  # Convert list of vectors into a matrix with 3 rows
+  genome_matrix <- as.matrix(
+    as.data.frame(do.call(rbind, genome_list)) %>%
+      arrange(V1) %>%   # Sort by the first column
+      slice_head(n = 3) %>%
+      select(-V1)       # Remove the first column if needed
+  )
+
+  output_table <- lapply(opFromPar, function(i)
+    i$output_table)
+
+  output_table <-
+    as.data.frame(do.call(rbind, output_table) %>%
+                    arrange(best_cost))
+
+  results_table <- lapply(opFromPar, function(i)
+    i$results_table)
+
+  results_table <-
+    as.data.frame(do.call(rbind, results_table) %>%
+                    arrange(cost))
 
 
+  return(list(
+    output_table = output_table,
+    results_table = results_table,
+    genome_matrix = genome_matrix,
+    output_raw = opFromPar
+  ))
+}
 
-
+# data <- generate_distribution_metrics(100, 1000000, "normal")
+#
+# grammarDef <- create_grammar_wrapper(data, variables = c('sigma'))
+#
+# output <-
+#   par_sym_reg(
+#     symbolic_regression = symbolic_regression,
+#     evalFunc = SymRegFitFunc,
+#     optimizer = 'random',
+#     grammarDef = grammarDef,
+#     data = data,
+#     iterations = 50,
+#     termination_cost = .1,
+#     mutationChance = "random",
+#     n_core = 15
+#   )
+#
+# output2 <-
+#   par_sym_reg(
+#     symbolic_regression = symbolic_regression,
+#     evalFunc = SymRegFitFunc,
+#     optimizer = 'random',
+#     grammarDef = grammarDef,
+#     data = data,
+#     iterations = 50,
+#     # termination_cost = .01,
+#     suggestions = output$genome_matrix,
+#     mutationChance = "random",
+#     n_core = 15
+#   )
+#
+#
+#
+#
+#
+# test <-
+#   symbolic_regression(
+#     grammarDef = grammarDef,
+#     evalFunc = SymRegFitFunc,
+#     iterations = 50,
+#     optimizer = 'ga',
+#     verbose = TRUE,
+#     termination_cost = .2
+#   )
+#
+# result <-
+#   symbolic_regression(
+#     grammarDef = grammarDef,
+#     evalFunc = SymRegFitFunc,
+#     iterations = 50,
+#     optimizer = 'ga',
+#     verbose = TRUE,
+#     termination_cost = .1,
+#     suggestions = matrix(test[["best_genome"]],nrow = 1)
+#   )
 
 
 # # GIT CLONE HELPER:

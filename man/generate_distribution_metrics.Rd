@@ -7,46 +7,62 @@
 generate_distribution_metrics(
   num_distributions = 1000,
   samples_per_dist = 500,
-  dist_type = c("log-normal", "normal", "uniform", "exponential")
+  dist_type,
+  a = F,
+  b = F
 )
 }
 \arguments{
-\item{num_distributions}{An integer specifying the number of distributions to generate (default: 1000).}
+\item{num_distributions}{Integer. The number of distributions to generate (default: `1000`).}
 
-\item{samples_per_dist}{An integer specifying the number of samples per distribution (default: 500).}
+\item{samples_per_dist}{Integer. The number of samples per generated distribution (default: `500`).}
 
-\item{dist_type}{A string specifying the type of distribution to generate.
-Options include `"log-normal"`, `"normal"`, `"uniform"`, and `"exponential"`.}
+\item{dist_type}{Character. Specifies the type of distribution to generate. Options include:
+- `"normal"`: Generates normal distributions.
+- `"log-normal"`: Generates log-normal distributions.
+- `"uniform"`: Generates uniform distributions.
+- `"exponential"`: Generates exponential distributions.}
+
+\item{a}{Numeric or `FALSE`. The lower bound for uniform distributions. If `FALSE`, a random value is used.}
+
+\item{b}{Numeric or `FALSE`. The upper bound for uniform distributions. If `FALSE`, a random value is used.}
 }
 \value{
-A data frame containing computed metrics for each generated distribution.
-        Columns include:
-        - `distNbr`: Distribution number (1 to `num_distributions`).
-        - `distType`: Type of distribution generated.
-        - `mu`: Mean parameter used for generating the distribution.
-        - `sigma`: Standard deviation parameter used for generating the distribution.
-        - `n`: Number of samples in each distribution.
-        - `xbar`: Sample mean (log-transformed where applicable).
-        - `std`: Sample standard deviation.
-        - `skew`: Sample skewness.
-        - `entropy`: Entropy (for log-normal and normal distributions).
+A `data.frame` containing the following columns:
+  \describe{
+    \item{`distNbr`}{The index number of the generated distribution.}
+    \item{`distType`}{The type of distribution generated (`"normal"`, `"log-normal"`, `"uniform"`, or `"exponential"`).}
+    \item{`n`}{The number of samples in each distribution.}
+    \item{`mu`}{The calculated mean of the generated distribution.}
+    \item{`sigma`}{The standard deviation of the generated distribution.}
+    \item{`skew`}{The skewness of the generated distribution.}
+    \item{`entropy`}{The entropy of the distribution, calculated using theoretical formulas.}
+    \item{`lambda`}{(For exponential distributions) The rate parameter.}
+    \item{`a`}{(For uniform distributions) The lower bound.}
+    \item{`b`}{(For uniform distributions) The upper bound.}
+  }
 }
 \description{
-This function generates random distributions of a specified type and computes
-key statistical metrics such as mean, standard deviation, skewness, and entropy.
+This function generates synthetic data for different probability distributions and calculates
+key metrics such as mean (`mu`), standard deviation (`sigma`), skewness, and entropy.
+}
+\details{
+This function internally calls specialized sub-functions for each distribution type:
+\itemize{
+  \item `generateNormalDistributions()`
+  \item `generateLognormalDistributions()`
+  \item `generateUniformDistributions()`
+  \item `generateExponentialDistributions()`
+}
+These sub-functions generate random samples and compute distribution-specific statistics.
 }
 \examples{
-# Generate 100 distributions with 500 samples each (default settings)
-metrics_df <- generate_distribution_metrics()
+\dontrun{
+  # Generate metrics for 500 normal distributions with 1000 samples each
+  normal_data <- generate_distribution_metrics(500, 1000, "normal")
 
-# Generate 500 normal distributions with 1000 samples per distribution
-normal_metrics <- generate_distribution_metrics(num_distributions = 500,
-                                                samples_per_dist = 1000,
-                                                dist_type = "normal")
-
-# Generate 200 exponential distributions with 250 samples per distribution
-exp_metrics <- generate_distribution_metrics(num_distributions = 200,
-                                             samples_per_dist = 250,
-                                             dist_type = "exponential")
+  # Generate 200 uniform distributions with predefined bounds
+  uniform_data <- generate_distribution_metrics(200, 500, "uniform", a = 0, b = 10)
+}
 
 }

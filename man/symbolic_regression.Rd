@@ -5,49 +5,101 @@
 \title{Perform Symbolic Regression using Grammatical Evolution}
 \usage{
 symbolic_regression(
-  data,
-  termination_cost = 0.05,
+  grammarDef,
+  evalFunc,
+  termination_cost = NA,
   optimizer = "es",
-  iterations = 3e+06,
-  seed = 2
+  iterations = 200,
+  suggestions = NULL,
+  mutationChance = -0.8,
+  verbose = FALSE
 )
 }
 \arguments{
-\item{data}{A data frame containing at least the following columns:
-`"mu"`, `"sigma"`, `"xbar"`, and `"entropy"`.}
+\item{grammarDef}{A list containing the grammar definition, variable names, and additional metadata.
+This should include:
+- `name`: A character vector of variable names.
+- `variables`: A vector of variables included in the regression.
+- `grammarDef`: The formal grammar object used for GE.}
 
-\item{termination_cost}{A numeric value specifying the termination cost for the evolution process (default: 0.05).}
+\item{evalFunc}{A function that evaluates the cost of an expression.
+It should accept an expression as input and return a numeric cost.}
 
-\item{optimizer}{A string specifying the optimization algorithm to use (default: `"es"`).}
+\item{termination_cost}{Numeric. The stopping criteria for evolution.
+If the best cost reaches this value, evolution stops. Default is `NA` (no early stopping).}
 
-\item{iterations}{An integer specifying the number of iterations for the evolution process (default: 3e6).}
+\item{optimizer}{Character. The optimization method to use. Options are:
+- `"es"`: Evolution Strategy (default).
+- `"ga"`: Genetic Algorithm.
+- `"random"`: Randomly selects between `"es"` and `"ga"`, with special handling for iterations.}
 
-\item{seed}{An integer used for random number generation to ensure reproducibility (default: 2).}
+\item{iterations}{Integer. Number of iterations to run the evolutionary process (default: `200`).
+If `optimizer = "random"` and `"es"` is chosen, iterations increase by 10x.}
+
+\item{suggestions}{A matrix of suggested genomes to initialize the evolution process.
+If `optimizer = "es"`, only the first row is used.}
+
+\item{mutationChance}{Numeric. Mutation probability in the evolutionary algorithm.
+If `"random"`, a random value in `[0,1]` is chosen.
+Default is `-0.8`, which might need clarification or adjustment.}
+
+\item{verbose}{Logical. If `TRUE`, prints real-time updates of the evolutionary process (default: `FALSE`).}
 }
 \value{
-A list containing:
-        - `best_expression`: The best mathematical expression found.
-        - `runtime`: Execution time of the symbolic regression process.
-        - `iterations`: The number of iterations performed.
-        - `optimizer`: The optimization method used.
+A list with the following elements:
+  \describe{
+    \item{`output_table`}{A `data.frame` containing the best discovered expression and associated metadata:
+      \itemize{
+        \item `distribution`: The name of the dataset distribution.
+        \item `optimizer`: Optimization method used.
+        \item `best_expression`: The best expression found.
+        \item `best_cost`: The best cost achieved.
+        \item `iterations`: The number of iterations performed.
+        \item `seed`: The random seed used.
+        \item `mutationChance`: The mutation probability used.
+        \item `runtime`: The total execution time.
+      }}
+    \item{`results_table`}{A `data.frame` containing detailed iteration-wise results:
+      \itemize{
+        \item `distribution`: The dataset distribution.
+        \item `optimizer`: The optimization method used.
+        \item `expression`: The best expression at a given iteration.
+        \item `cost`: The corresponding cost.
+        \item `iterations`: The current iteration number.
+        \item `mutationChance`: The mutation probability used.
+        \item `seed`: The random seed used.
+      }}
+    \item{`results`}{A list containing detailed evolution process snapshots at each step.}
+    \item{`best_genome`}{A numeric matrix containing the best genome representation.}
+  }
 }
 \description{
-This function applies symbolic regression to find an optimal mathematical expression
-that approximates entropy based on input variables using grammatical evolution.
+This function performs symbolic regression using Grammatical Evolution (GE).
+It allows the user to define a grammar, an evaluation function, and various
+optimization settings to evolve mathematical expressions that fit a given dataset.
 }
 \examples{
-# Generate sample data
-sample_data <- data.frame(
-  mu = runif(100, 1, 10),
-  sigma = runif(100, 1, 5),
-  xbar = rnorm(100, 5, 2),
-  entropy = rexp(100, rate = 0.5)
-)
+\dontrun{
 
-# Perform symbolic regression
-result <- symbolic_regression(sample_data)
+ data <- generate_distribution_metrics(100, 1000000, "normal")
+ grammarDef <- create_grammar_wrapper(data, variables = c('sigma'))
 
-# View best expression found
-print(result$best_expression)
+ SymRegFitFunc <- function(expr) {
+   result <-unlist(eval(parse(text = expr)))
+   if (any(is.nan(result))) {
+     return(Inf)
+   }
+   mean(log(1 + abs(data$entropy - result)))
+ }
 
+result <-
+  symbolic_regression(
+    grammarDef = grammarDef,
+    evalFunc = SymRegFitFunc,
+    iterations = 50,
+    optimizer = 'ga',
+    verbose = TRUE,
+    termination_cost = .1
+  )
+}
 }
