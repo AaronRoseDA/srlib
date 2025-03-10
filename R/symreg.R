@@ -561,19 +561,23 @@ symbolic_regression <- function(grammarDef,
 #####
 create_grammar_wrapper <- function(data,
                                    operators = c("+", "-", "*", "/", "^"),
-                                   functions = c(log, sqrt, exp),
-                                   variables) {
+                                   functions = c('log', 'sqrt', 'exp'),
+                                   variables,
+                                   constants = c(1, 2, pi)) {
 
   ivCol <- variables  # Preserve variable names
   variables <- syms(paste0("data$",ivCol))
 
+  functions <- syms(functions)
+  operators <- syms(operators)
+
+
   # Define grammar rules
   ruleDef <- list(
     expr = grule(op(expr, expr), func(expr), var),
-    func = grule(log, sqrt, exp),  # Ensure function set includes `exp`
-    op = grule("+", "-", "*", "/", "^"),
-    var = do.call(grule, c(variables, list(1, 2, pi))),  # Dynamically unpack variable names
-    n = grule(1, 2, 3)
+    func = do.call(grule, functions),  # Ensure function set includes `exp`
+    op = do.call(grule, operators),
+    var = do.call(grule, c(variables, constants))
   )
 
   # Create the grammar definition
@@ -588,6 +592,38 @@ create_grammar_wrapper <- function(data,
     setNames(lapply(ivCol, function(col) data[[col]]), ivCol)  # Dynamically add multiple elements
   ))
 }
+
+# data <- generate_distribution_metrics(100, 100000,"normal")
+
+
+# grammarDef <- create_grammar_wrapper(data, variables = "sigma",constants = c(.5,17.07947,2),functions = c('log','exp'),operators = c("^","*"))
+#
+#
+# result <- par_sym_reg(
+#   symbolic_regression = symbolic_regression,
+#   evalFunc = SymRegFitFunc,
+#   grammarDef = grammarDef,
+#   data = data,
+#   n_core = 14,iterations = 100,optimizer = 'ga'
+# )
+#
+# result <- par_sym_reg(
+#   symbolic_regression = symbolic_regression,
+#   evalFunc = SymRegFitFunc,
+#   grammarDef = grammarDef,
+#   data = data,
+#   n_core = 14,
+#   iterations = 100,
+#   optimizer = 'ga',
+#   suggestions = result$genome_matrix,
+#   mutationChance = .9
+# )
+#
+
+
+
+
+
 
 
 ##### --- ROXYGEN ---- #####
@@ -681,13 +717,14 @@ par_sym_reg <- function(symbolic_regression,  # Removed default evaluation
   # Stop the cluster after execution
   parallel::stopCluster(cl)
 
-  genome_list <- lapply(opFromPar, function(i) i$best_genome)
+  genome_list <- lapply(result$output_raw, function(i) i$best_genome)
 
   # Convert list of vectors into a matrix with 3 rows
   genome_matrix <- as.matrix(
-    as.data.frame(do.call(rbind, genome_list)) %>%
-      arrange(V1) %>%   # Sort by the first column
-      slice_head(n = 3) %>%
+    as.data.frame(do.call(rbind, genome_list))    %>%
+      arrange(V1)    %>%   # Sort by the first column
+      distinct(.keep_all = TRUE)    %>%  # Remove duplicates based on V1
+      slice_head(n = 3)    %>%
       select(-V1)       # Remove the first column if needed
   )
 
