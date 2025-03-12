@@ -325,6 +325,18 @@ SymRegFitFunc <- function(expr) {
   mean(log(1 + abs(data$entropy - result)))
 }
 
+SSE_eval_func <- function(expr, data) {
+  # print(expr)
+  result <-unlist(
+    eval(parse(text = expr))
+  )
+  if (any(is.nan(result))) {
+    return(Inf)
+  }
+  sum(abs(data$entropy - result)^2)
+}
+
+
 
 ##### --- ROXYGEN ---- #####
 #' Perform Symbolic Regression using Grammatical Evolution
@@ -414,7 +426,7 @@ symbolic_regression <- function(grammarDef,
                                 optimizer = "es",
                                 iterations = 200,
                                 suggestions = NULL,
-                                mutationChance = -.8,
+                                mutationChance = NA,
                                 verbose = FALSE) {
 
   if (optimizer == "random") {
@@ -457,7 +469,7 @@ symbolic_regression <- function(grammarDef,
 
   # Start runtime tracking
   start_time <- Sys.time()
-  currentBest <- 1
+  currentBest <- Inf
   # Run Grammatical Evolution
   gramEvolution <- GrammaticalEvolution(
     grammarDef,
@@ -571,7 +583,6 @@ create_grammar_wrapper <- function(data,
   functions <- syms(functions)
   operators <- syms(operators)
 
-
   # Define grammar rules
   ruleDef <- list(
     expr = grule(op(expr, expr), func(expr), var),
@@ -661,7 +672,7 @@ create_grammar_wrapper <- function(data,
 #'
 #' @export
 #####
-par_sym_reg <- function(symbolic_regression,  # Removed default evaluation
+par_sym_reg <- function(symbolic_regression = symbolic_regression,
                         evalFunc,
                         grammarDef,
                         data,  # Corrected argument order
@@ -717,7 +728,7 @@ par_sym_reg <- function(symbolic_regression,  # Removed default evaluation
   # Stop the cluster after execution
   parallel::stopCluster(cl)
 
-  genome_list <- lapply(result$output_raw, function(i) i$best_genome)
+  genome_list <- lapply(opFromPar, function(i) i$best_genome)
 
   # Convert list of vectors into a matrix with 3 rows
   genome_matrix <- as.matrix(
