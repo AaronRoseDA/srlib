@@ -1,4 +1,6 @@
+#these are super changes
 
+library(e1071)
 
 .onLoad <- function(libname, pkgname) {
   required_packages <- c("moments", "gramEvol", "dplyr", "odbc", "DBI", "e1071", "parallel")
