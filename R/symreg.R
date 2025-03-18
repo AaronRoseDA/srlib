@@ -130,7 +130,7 @@ generate_distribution_metrics <- function(num_distributions = 1000,
       # -- CALCULATE SAMPLE STATISTICS --
       xbar_i <- mean(x)
       std_i  <- sd(x)
-      skew_i <- skewness(x, type = 2)
+      skew_i <- e1071::skewness(x, type = 2)
 
       # -- ENTROPY FOR NORMAL DISTRIBUTION --
       entropy_i <- 0.5 * log(2 * pi * exp(1) * std_i^2)
