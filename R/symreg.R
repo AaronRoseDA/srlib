@@ -95,6 +95,36 @@ generate_distribution_metrics <- function(num_distributions = 1000,
       # -- GENERATE SAMPLES --
       x <- rnorm(n = samples_per_dist, mean = mu_i, sd = sigma_i)
 
+      ## KP CONT
+      ########################
+      # Perform KDE with default bandwidth
+      # uses a gaussian kernel; no option to change
+      # kde_result <- kde(x)
+
+      # Extract bandwidth (assuming Gaussian kernel)
+      # h <- kde_result$h ### SAVE AS kde_band
+      #
+      # # KDE-estimated mean (unbiased, no correction needed)
+      # kde_mean <- sum(kde_result$eval.points * kde_result$estimate) * diff(kde_result$eval.points[1:2])
+      #
+      # # KDE-estimated variance (biased upward due to kernel smoothing)
+      # kde_variance_raw <- sum((kde_result$eval.points - kde_mean)^2 * kde_result$estimate) * diff(kde_result$eval.points[1:2])
+      #
+      # # Apply theoretical bias-correction for Gaussian kernel
+      # kde_variance_corrected <- kde_variance_raw - h^2
+      #
+      # # Calculate KDE-based entropy estimate
+      # density_vals <- predict(kde_result, x = data)
+      # entropy_kde <- -mean(log(density_vals))
+
+      # Display all results clearly
+      # entropy_theoretical <- uni_normal_entropy(theoretical_variance)
+      # data_entropy_plugin <- uni_normal_entropy(data_variance)
+      # kde_entropy_plugin <- uni_normal_entropy(kde_variance_corrected)
+
+
+      ##########################
+
       # -- CALCULATE SAMPLE STATISTICS --
       xbar_i <- mean(x)
       std_i  <- sd(x)
@@ -284,6 +314,14 @@ generate_distribution_metrics <- function(num_distributions = 1000,
 
   return(results_df)
 }
+
+
+norm_df <-
+  generate_distribution_metrics(
+    num_distributions = 10,
+    samples_per_dist = 100000,
+    dist_type = "normal"
+  )
 
 
 ##### ---- ROXYGEN ---- #####
