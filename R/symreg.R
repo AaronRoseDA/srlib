@@ -7,7 +7,7 @@ library(e1071)
   options(repos = c(CRAN = "https://cran.rstudio.com/"))
   # Function to check and install missing packages
   check_install_packages <- function(pkg) {
-    if (!requireNamespace(pkg, quietly = TRUE)) {
+    if (requireNamespace(pkg, quietly = FALSE)) {
       install.packages(pkg, dependencies = TRUE)
     }
     library(pkg, character.only = TRUE)
