@@ -28,26 +28,6 @@ gen_uni_triangle <- function(n, a, b, c) {
 
 #generate random univariate normal data
 
-gen_uni_laplace<-function(aLocation,aScale,aN,aSeed) {
-  set.seed(aSeed)
-  u <- runif(aN, -0.5, 0.5)  # Generate n uniform random numbers in (-0.5, 0.5)
-  x <- aLocation - aScale * sign(u) * log(1 - 2 * abs(u))  # Apply inverse transform
-  return(x)
-}
-
-gen_uni_logistic<-function(aLocation,aScale,aN,aSeed) {
-  set.seed(aSeed)
-  return(aN, location = aLocation, scale = aScale)
-}
-
-gen_uni_skew_normal<-function(aLocation,aScale,aShape,aN,aSeed) {
-  set.seed(aSeed)
-  #xi Location parameter
-  #omega Scale parameter
-  #alpha Shape (skewness)
-  return(rsn(aN, xi = aLocation, omega = aScale, alpha = aShape))
-}
-
 uni_uniform_entropy<-function(aMinimum,aMaximum) {
   return(log(aMaximum - aMinimum))
 }
