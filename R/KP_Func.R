@@ -28,31 +28,6 @@ gen_uni_triangle <- function(n, a, b, c) {
 
 #generate random univariate normal data
 
-gen_uni_uniform<-function(aMinimum,aMaximum,aN,aSeed) {
-  set.seed(aSeed)
-  return(runif(aN, min=aMinimum, max=aMaximum))
-}
-
-gen_uni_triangle<-function(aMinimum,aMaximum,aPeak,aN,aSeed) {
-  set.seed(aSeed)
-  return(gen_uni_triangle(aN, a = aMinimum, b = aMaximum, c = aPeak))
-}
-
-gen_uni_normal<-function(aMean,aSD,aN,aSeed) {
-  set.seed(aSeed)
-  return(rnorm(aN, mean=aMean, sd=aSD))
-}
-
-gen_uni_half_normal<-function(aMean,aSD,aN,aSeed) {
-  set.seed(aSeed)
-  return(abs(rnorm(aN, mean=aMean, sd=aSD)))
-}
-
-gen_uni_exponential<-function(aLambda,aN,aSeed) {
-  set.seed(aSeed)
-  return(rexp(aN, rate=aLambda))
-}
-
 gen_uni_laplace<-function(aLocation,aScale,aN,aSeed) {
   set.seed(aSeed)
   u <- runif(aN, -0.5, 0.5)  # Generate n uniform random numbers in (-0.5, 0.5)
