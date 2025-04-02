@@ -1,3 +1,4 @@
+##### ---- ROXYGEN ---- #####
 #' Create a Database Connection
 #'
 #' This function establishes a connection to an Azure SQL Server database
@@ -20,7 +21,7 @@
 #' }
 #'
 #' @export
-
+#####
 create_db_connection <- function(user_name, password) {
   con <- tryCatch({
     dbConnect(odbc::odbc(),
@@ -43,7 +44,20 @@ create_db_connection <- function(user_name, password) {
   return(con)
 }
 
+con <- dbConnect(odbc::odbc(),
+                 Driver = "{ODBC Driver 18 for SQL Server}",
+                 Server = "symregserver.database.windows.net",
+                 Database = "SymReg",
+                 Authentication = "ActiveDirectoryInteractive",
+                 Encrypt = "yes",
+                 TrustServerCertificate = "no",
+                 Timeout = 30)
 
+
+
+
+
+##### ---- ROXYGEN ---- #####
 #' Append or Replace Data in a Database Table
 #'
 #' This function appends or replaces data in an existing database table.
@@ -74,7 +88,7 @@ create_db_connection <- function(user_name, password) {
 #' append_to_table(my_connection, table_name = "ExistingTable", data = df, verbose = TRUE)
 #'
 #' @export
-
+#####
 append_to_table <- function(connection, table_name, data, verbose = FALSE, DATE_INSERTED = TRUE, mode = "append") {
 
   # Validate mode
@@ -123,7 +137,7 @@ append_to_table <- function(connection, table_name, data, verbose = FALSE, DATE_
   if (verbose) cat("Data successfully ", mode, "ed into table: ", table_name, "\n",sep = "")
 }
 
-
+##### ---- ROXYGEN ---- #####
 #' Create or Update a Table in a Database
 #'
 #' This function creates a new table in a database based on the structure of a provided data frame.
@@ -151,9 +165,12 @@ append_to_table <- function(connection, table_name, data, verbose = FALSE, DATE_
 #' create_table(my_connection, table_name = "NewTable", table = new_data)
 #'
 #' @export
-
+#####
 create_table <- function(connection, table_name, table, DATE_INSERTED = TRUE) {
-
+  # connection <-  con
+  # table_name <- "input_NORMAL"
+  # table<- NORMAL_data
+  # DATE_INSERTED = FALSE
   # Validate input
   if (!is.data.frame(table)) stop("The 'table' parameter must be a data frame.")
 
@@ -172,10 +189,14 @@ create_table <- function(connection, table_name, table, DATE_INSERTED = TRUE) {
   } else {
     # Create a new table
     # if (DATE_INSERTED && !"DATE_INSERTED" %in% names(table)) table$DATE_INSERTED <- Sys.time()
-    ifelse(nrow(table) > 0,
-           if (DATE_INSERTED && !"DATE_INSERTED" %in% names(table)) table$DATE_INSERTED <- Sys.time(),
-           table$DATE_INSERTED <- character()
-    )
+    if (nrow(table) > 0) {
+      if (DATE_INSERTED && !"DATE_INSERTED" %in% names(table)) {
+        table$DATE_INSERTED <- Sys.time()
+      }
+    } else {
+      table$DATE_INSERTED <- character()
+    }
+
     # Generate CREATE TABLE SQL
     create_stmt <- paste0("CREATE TABLE ", table_name, " (",
                           paste(sprintf("[%s] %s", names(table), ifelse(sapply(table, is.numeric), "FLOAT", "VARCHAR(255)")), collapse = ", "),
@@ -191,7 +212,7 @@ create_table <- function(connection, table_name, table, DATE_INSERTED = TRUE) {
   }
 }
 
-
+##### ---- ROXYGEN ---- #####
 #' Delete Tables or Views from a Database
 #'
 #' This function deletes specified tables or views from a database. If no items are provided,
@@ -218,6 +239,7 @@ create_table <- function(connection, table_name, table, DATE_INSERTED = TRUE) {
 #' delete_db_items(my_connection, mode = "view")
 #'
 #' @export
+#####
 delete_db_items <- function(connection, items = NULL, mode) {
 
   # Validate mode
@@ -292,7 +314,7 @@ delete_db_items <- function(connection, items = NULL, mode) {
   cat("Deletion process completed.\n")
 }
 
-
+##### ---- ROXYGEN ---- #####
 #' Retrieve a Table or Summary from a Database
 #'
 #' This function fetches data from a specified table in the database,
@@ -328,6 +350,7 @@ delete_db_items <- function(connection, items = NULL, mode) {
 #' df <- get_db_table(my_connection, table = "SalesData", verbose = TRUE)
 #'
 #' @export
+#####
 get_db_table <- function(connection, table = NULL, n_rows = NULL, summary = FALSE, verbose = FALSE) {
 
   # If summary = TRUE, ignore table & n_rows and return all tables with first 10 rows
@@ -336,10 +359,16 @@ get_db_table <- function(connection, table = NULL, n_rows = NULL, summary = FALS
                          "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo'")
     table_list <- list()
 
-    for (tbl in tables$TABLE_NAME) {
-      query <- sprintf("SELECT TOP 4 * FROM dbo.[%s]", tbl)
-      table_list[[tbl]] <- dbGetQuery(connection, query)
-    }
+
+    if (is.null(table))
+      for (tbl in tables$TABLE_NAME) {
+        query <- sprintf("SELECT TOP 4 * FROM dbo.[%s]", tbl)
+        table_list[[tbl]] <- dbGetQuery(connection, query)
+      } else if (table %in% tables$TABLE_NAME){
+        query <- sprintf("SELECT TOP 4 * FROM dbo.[%s]", table)
+        table_list[[table]] <- dbGetQuery(connection, query)
+      }
+
     if (verbose){
       print(table_list)}
     return(table_list)
@@ -387,8 +416,17 @@ get_db_table <- function(connection, table = NULL, n_rows = NULL, summary = FALS
 
 
 
+create_table(con, "input_NORMAL", NORMAL_data, DATE_INSERTED = FALSE)
+create_table(con, "input_HALFNORMAL", HALFNORMAL_data, DATE_INSERTED = FALSE)
+create_table(con, "input_UNIFORM", UNIFORM_data, DATE_INSERTED = FALSE)
 
 
+append_to_table(con, "input_NORMAL", NORMAL_data, DATE_INSERTED = FALSE)
+append_to_table(con, "input_HALFNORMAL", HALFNORMAL_data, DATE_INSERTED = FALSE)
+append_to_table(con, "input_UNIFORM", UNIFORM_data, DATE_INSERTED = FALSE)
+
+get_db_table(connection = con, summary = T)
+temp <- get_db_table(connection = con, table = "input_NORMAL", summary = F)
 
 
 

@@ -101,7 +101,6 @@ uni_logistic_entropy<-function(aScale) {
   return(log(aScale)+2)
 }
 
-
 uni_skew_normal_entropy<-function(aLocation,aScale,aShape,aN,aSeed) {
   #this formula is an approximation Azzalini (1985)
   #xi Location parameter epsilon
@@ -112,39 +111,47 @@ uni_skew_normal_entropy<-function(aLocation,aScale,aShape,aN,aSeed) {
   return(entropy)
 }
 
-
 bi_normal_entropy<-function(aVarX,aVarY,aCorr) {
 
   return(1+log(2*pi)+1/2*log(aVarX*aVarY*(1-aCorr^2)))
 }
 
-entropy_test<-function() {
+entropy_test<-function(dist, sample_size = 100000, seed = NA, verbose = FALSE, generate = TRUE) {
 
-  sample_size<-100000
+  if (is.na(seed)) seed <- round(runif(1,1,2147483647))
+
+  dist <- toupper(dist)
+
+  if (!(dist %in% c('NORMAL', 'HALFNORMAL', 'UNIFORM', 'TRIANGULAR', 'EXPONENTIAL', 'LAPLACE', 'LOGISTIC'))){
+    warning(paste('dist_type "', dist, '" not found and will not return data...', sep = ""))
+  }
 
   if(dist == "NORMAL") {
     theor_mean<-0
     theor_sd<-1
     theor_variance<-theor_sd^2
     data<-gen_uni_normal(theor_mean,theor_sd,
-                         sample_size,8675309)
-  } else if(dist == "HALFNORMAL") {
+                         sample_size,seed)
+  }
+  if(dist == "HALFNORMAL") {
     theor_center<-0
     theor_center_sd<-1
     theor_mean<-theor_center_sd * sqrt(2) / sqrt(pi)
     theor_variance<-theor_center_sd^2*(1-2/pi)
     theor_sd <-theor_variance^0.5
     data<-gen_uni_half_normal(theor_center,theor_center_sd,
-                              sample_size,8675309)
-  } else if(dist == "UNIFORM") {
+                              sample_size,seed)
+  }
+  if(dist == "UNIFORM") {
     theor_minimum<-0
     theor_maximum<-10
     theor_mean<-(theor_minimum+theor_maximum)/2
     theor_variance<-(theor_maximum - theor_minimum)^2/12
     theor_sd<-sqrt(theor_variance)
     data<-gen_uni_uniform(theor_minimum,theor_maximum,
-                          sample_size,8675309)
-  } else if(dist == "TRIANGULAR") {
+                          sample_size,seed)
+  }
+  if(dist == "TRIANGULAR") {
     theor_minimum<-0
     theor_maximum<-10
     theor_peak<-3
@@ -155,9 +162,10 @@ entropy_test<-function() {
                        theor_maximum*theor_peak)/18
     theor_sd<-sqrt(theor_variance)
     data<-gen_uni_triangle(theor_minimum,theor_maximum,theor_peak,
-                           sample_size,8675309)
+                           sample_size,seed)
 
-  } else if(dist == "EXPONENTIAL") {
+  }
+  if(dist == "EXPONENTIAL") {
     log_transform<-TRUE
     reflection<-TRUE
     theor_lambda<-2.0
@@ -165,24 +173,27 @@ entropy_test<-function() {
     theor_variance<-1/theor_lambda^2
     theor_sd<-sqrt(theor_variance)
     data<-gen_uni_exponential(theor_lambda,
-                              sample_size,42)
-  } else if(dist == "LAPLACE") {
+                              sample_size,seed)
+  }
+  if(dist == "LAPLACE") {
     theor_location<-2
     theor_scale<-4
     theor_mean<-theor_location
     theor_variance<-2*theor_scale^2
     theor_sd<-sqrt(theor_variance)
     data<-gen_uni_laplace(theor_location,theor_scale,
-                          sample_size,8675309)
-  } else if(dist == "LOGISTIC") {
+                          sample_size,seed)
+  }
+  if(dist == "LOGISTIC") {
     theor_location<-2
     theor_scale<-4
     theor_mean<-theor_location
     theor_variance<-theor_scale^2*pi^2/3
     theor_sd<-sqrt(theor_variance)
     data<-gen_uni_laplace(theor_location,theor_scale,
-                          sample_size,8675309)
-  } else if(dist == "SKEWNORMAL") {
+                          sample_size,seed)
+  }
+  if(dist == "SKEWNORMAL") {
     theor_location<-0
     theor_scale<-1
     theor_shape<-5
@@ -191,14 +202,15 @@ entropy_test<-function() {
     theor_variance<-theor_scale^2*(1-2*theor_scale^2/pi)
     theor_sd<-sqrt(theor_variance)
     data<-gen_uni_skew_normal(theor_location,theor_scale,theor_shape,
-                              sample_size,8675309)
-  } else if(dist == "BINORMAL") {
+                              sample_size,seed)
+  }
+  if(dist == "BINORMAL") {
     theor_means<- c(50, 80)
     theor_sigmas<-c(3,10)
     theor_correlation<-0.6
     theor_variances<-theor_sigmas^2
     data<-gen_uni_laplace(theor_location,theor_scale,
-                          sample_size,8675309)
+                          sample_size,seed)
   }
 
   if(log_transform==FALSE) {
@@ -305,27 +317,55 @@ entropy_test<-function() {
     data_entropy_plugin <- uni_normal_entropy(data_variance)
     kde_entropy_plugin <- uni_normal_entropy(kde_variance_corrected)
 
-    cat("Theoretical Mean:", theor_mean, "\n")
-    cat("Theoretical Variance:", theor_variance, "\n")
-    print(sprintf("Data N: %7d",sample_size))
-    cat("Data Mean:", data_mean, "\n")
-    cat("Data Variance:", data_variance, "\n")
-    cat("Data Minimum:", data_minimum, "\n")
-    cat("Data Maximum:", data_maximum, "\n")
-    cat("Mean (KDE):", kde_mean, "\n")
-    cat("Variance (uncorrected KDE):", kde_variance_raw, "\n")
-    cat("Variance (bias-corrected KDE):", kde_variance_corrected, "\n")
-    cat("KDE-based Differential Entropy:", entropy_kde, "\n")
-    cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
-    cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
-    cat("Theoretical Entropy:", entropy_theor, "\n")
-  } else if (dist == "HALFNORMAL") {
+    if (verbose){
+      cat("Theoretical Mean:", theor_mean, "\n")
+      cat("Theoretical Variance:", theor_variance, "\n")
+      print(sprintf("Data N: %7d",sample_size))
+      cat("Data Mean:", data_mean, "\n")
+      cat("Data Variance:", data_variance, "\n")
+      cat("Data Minimum:", data_minimum, "\n")
+      cat("Data Maximum:", data_maximum, "\n")
+      cat("Mean (KDE):", kde_mean, "\n")
+      cat("Variance (uncorrected KDE):", kde_variance_raw, "\n")
+      cat("Variance (bias-corrected KDE):", kde_variance_corrected, "\n")
+      cat("KDE-based Differential Entropy:", entropy_kde, "\n")
+      cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
+      cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
+      cat("Theoretical Entropy:", entropy_theor, "\n")}
+
+    if (generate){
+          results <- data.frame(
+      theor_mean = theor_mean,
+      theor_variance = theor_variance,
+      theor_entropy = entropy_theor,
+
+      data_n = sample_size,
+      data_mean = data_mean,
+      data_variance = data_variance,
+      data_min = data_minimum,
+      data_max = data_maximum,
+      data_entropy_plugin = data_entropy_plugin,
+
+      KDE_mean = kde_mean,
+      KDE_variance_raw = kde_variance_raw,
+      KDE_variance_corrected = kde_variance_corrected,
+      KDE_entropy = entropy_kde,
+      KDE_entropy_plugin = kde_entropy_plugin,
+
+      Seed = seed
+    )
+    return(results)
+    }
+
+
+  }
+  if (dist == "HALFNORMAL") {
     # Display all results clearly
     entropy_theor <- uni_half_normal_entropy(theor_variance)
     data_entropy_plugin <- uni_half_normal_entropy(data_variance)
     kde_entropy_plugin <- uni_half_normal_entropy(kde_variance_corrected)
-
-    cat("Theoretical Center",theor_center,"\n")
+    if (verbose){
+          cat("Theoretical Center",theor_center,"\n")
     cat("Theoretical Mean:", theor_mean, "\n")
     cat("Theoretical Variance:", theor_variance, "\n")
     print(sprintf("Data N: %7d",sample_size))
@@ -340,14 +380,42 @@ entropy_test<-function() {
     cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
     cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
     cat("Theoretical Entropy:", entropy_theor, "\n")
-  } else if(dist == "UNIFORM") {
+      }
+
+    if (generate){
+          results <- data.frame(
+      theor_center = theor_center,
+      theor_mean = theor_mean,
+      theor_variance = theor_variance,
+      theor_entropy = entropy_theor,
+
+      data_n = sample_size,
+      data_mean = data_mean,
+      data_variance = data_variance,
+      data_min = data_minimum,
+      data_max = data_maximum,
+      data_entropy_plugin = data_entropy_plugin,
+
+      KDE_mean = kde_mean,
+      KDE_variance_raw = kde_variance_raw,
+      KDE_variance_corrected = kde_variance_corrected,
+      KDE_entropy = entropy_kde,
+      KDE_entropy_plugin = kde_entropy_plugin,
+
+      Seed = seed
+    )
+    return(results)
+    }
+
+  }
+  if(dist == "UNIFORM") {
     # a non Gaussian kernel like rectangular would be better
-    entropy_theoretical <- uni_uniform_entropy(theor_minimum,theoretical_maximum)
+    entropy_theor <- uni_uniform_entropy(theor_minimum,theor_maximum)
     data_entropy_plugin <- uni_uniform_entropy(data_minimum,data_maximum)
     #kernel does not alter minimum and maximum values
     kde_entropy_plugin <- uni_uniform_entropy(data_minimum,data_maximum)
-
-    cat("Theoretical Mean:", theor_mean, "\n")
+    if (verbose){
+          cat("Theoretical Mean:", theor_mean, "\n")
     cat("Theoretical Variance:", theor_variance, "\n")
     cat("Theoretical Minimum:", theor_minimum, "\n")
     cat("Theoretical Maximum:", theor_maximum, "\n")
@@ -364,14 +432,44 @@ entropy_test<-function() {
     cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
     cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
     cat("Theoretical Entropy:", entropy_theor, "\n")
-  } else if(dist == "TRIANGULAR") {
+    }
+
+    if (generate){
+      results <- data.frame(
+      theor_mean = theor_mean,
+      theor_variance = theor_variance,
+      theor_min = theor_minimum,
+      theor_max = theor_maximum,
+      theor_entropy = entropy_theor,
+
+      data_n = sample_size,
+      data_mean = data_mean,
+      data_variance = data_variance,
+      data_min = data_minimum,
+      data_max = data_maximum,
+      data_entropy_plugin = data_entropy_plugin,
+
+      KDE_mean = kde_mean,
+      KDE_variance_raw = kde_variance_raw,
+      KDE_variance_corrected = kde_variance_corrected,
+      KDE_entropy = entropy_kde,
+      KDE_entropy_plugin = kde_entropy_plugin,
+
+      Seed = seed
+    )
+
+    return(results)
+    }
+
+  }
+  if(dist == "TRIANGULAR") {
     # a non Gaussian kernel like rectangular would be better
-    entropy_theoretical <- uni_triangle_entropy(theor_minimum,theoretical_maximum)
+    entropy_theoretical <- uni_triangle_entropy(theor_minimum,theor_maximum)
     data_entropy_plugin <- uni_triangle_entropy(data_minimum,data_maximum)
     #kernel does not alter minimum and maximum values
     kde_entropy_plugin <- uni_triangle_entropy(data_minimum,data_maximum)
-
-    cat("Theoretical Mean:", theor_mean, "\n")
+    if (verbose){
+          cat("Theoretical Mean:", theor_mean, "\n")
     cat("Theoretical Variance:", theor_variance, "\n")
     cat("Theoretical Minimum:", theor_minimum, "\n")
     cat("Theoretical Maximum:", theor_maximum, "\n")
@@ -389,12 +487,44 @@ entropy_test<-function() {
     cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
     cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
     cat("Theoretical Entropy:", entropy_theoretical, "\n")
-  } else if(dist == "EXPONENTIAL") {
+    }
+    if (generate){
+          results <- data.frame(
+      theor_mean = theor_mean,
+      theor_variance = theor_variance,
+      theor_min = theor_minimum,
+      theor_max = theor_maximum,
+      theor_peak = theor_peak,
+      theor_entropy = entropy_theoretical,
+
+      data_n = sample_size,
+      data_mean = data_mean,
+      data_variance = data_variance,
+      data_min = data_minimum,
+      data_max = data_maximum,
+      data_entropy_plugin = data_entropy_plugin,
+
+      KDE_mean = kde_mean,
+      KDE_variance_raw = kde_variance_raw,
+      KDE_variance_corrected = kde_variance_corrected,
+      KDE_entropy = entropy_kde,
+      KDE_entropy_plugin = kde_entropy_plugin,
+
+      Seed = seed
+    )
+    return(results)
+    }
+
+
+  }
+  if(dist == "EXPONENTIAL") {
     # Display all results clearly
     entropy_theoretical <- uni_exponential_entropy(theoretical_lambda)
     data_entropy_plugin <- uni_exponential_entropy(1/data_mean)
     kde_entropy_plugin <- uni_exponential_entropy(1/kde_mean)
-    cat("Theoretical Lambda:", theor_lambda, "\n")
+
+    if (verbose){
+          cat("Theoretical Lambda:", theor_lambda, "\n")
     cat("Theoretical Mean:", theor_mean, "\n")
     cat("Theoretical Variance:", theor_variance, "\n")
     print(sprintf("Data N: %7d",sample_size))
@@ -409,15 +539,44 @@ entropy_test<-function() {
     cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
     cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
     cat("Theoretical Entropy:", entropy_theor, "\n")
-  } else if(dist == "LAPLACE") {
+    }
+
+    if (generate){
+          results <- data.frame(
+      theor_lambda = theor_lambda,
+      theor_mean = theor_mean,
+      theor_variance = theor_variance,
+      theor_entropy = entropy_theor,
+
+      data_n = sample_size,
+      data_mean = data_mean,
+      data_variance = data_variance,
+      data_min = data_minimum,
+      data_max = data_maximum,
+      data_entropy_plugin = data_entropy_plugin,
+
+      KDE_mean = kde_mean,
+      KDE_variance_raw = kde_variance_raw,
+      KDE_variance_corrected = kde_variance_corrected,
+      KDE_entropy = entropy_kde,
+      KDE_entropy_plugin = kde_entropy_plugin,
+
+      Seed = seed
+    )
+
+    return(results)
+    }
+
+  }
+  if(dist == "LAPLACE") {
     # Display all results clearly
     data_scale<-sqrt(data_variance/2)
     kde_scale_corrected<-sqrt(kde_variance_corrected/2)
     entropy_theoretical <- uni_laplace_entropy(theor_scale)
     data_entropy_plugin <- uni_laplace_entropy(data_scale)
     kde_entropy_plugin <- uni_laplace_entropy(kde_scale_corrected)
-
-    cat("Theoretical Mean/Location:", theor_mean, "\n")
+    if (verbose){
+          cat("Theoretical Mean/Location:", theor_mean, "\n")
     cat("Theoretical Variance:", theor_variance, "\n")
     cat("Theoretical Scale:", theor_scale, "\n")
     print(sprintf("Data N: %7d",sample_size))
@@ -434,15 +593,45 @@ entropy_test<-function() {
     cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
     cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
     cat("Theoretical Entropy:", entropy_theor, "\n")
-  } else if(dist == "LOGISTIC") {
+    }
+
+    if (generate){
+          results <- data.frame(
+      theor_mean = theor_mean,
+      theor_variance = theor_variance,
+      theor_scale = theor_scale,
+      theor_entropy = entropy_theor,
+
+      data_n = sample_size,
+      data_mean = data_mean,
+      data_variance = data_variance,
+      data_scale = data_scale,
+      data_min = data_minimum,
+      data_max = data_maximum,
+      data_entropy_plugin = data_entropy_plugin,
+
+      KDE_mean = kde_mean,
+      KDE_variance_raw = kde_variance_raw,
+      KDE_variance_corrected = kde_variance_corrected,
+      KDE_scale_corrected = kde_scale_corrected,
+      KDE_entropy = entropy_kde,
+      KDE_entropy_plugin = kde_entropy_plugin,
+
+      Seed = seed
+    )
+    return(results)
+    }
+
+  }
+  if(dist == "LOGISTIC") {
     # Display all results clearly
     data_scale<-sqrt(3*data_variance/pi^2)
     kde_scale_corrected<-sqrt(3*kde_variance_corrected/pi^2)
     entropy_theoretical <- uni_logistic_entropy(theor_scale)
     data_entropy_plugin <- uni_logistic_entropy(data_scale)
     kde_entropy_plugin <- uni_logistic_entropy(kde_scale_corrected)
-
-    cat("Theoretical Mean/Location:", theor_mean, "\n")
+    if (verbose){
+          cat("Theoretical Mean/Location:", theor_mean, "\n")
     cat("Theoretical Variance:", theor_variance, "\n")
     cat("Theoretical Scale:", theor_scale, "\n")
     print(sprintf("Data N: %7d",sample_size))
@@ -459,6 +648,124 @@ entropy_test<-function() {
     cat("Data plug-in Entropy:", data_entropy_plugin, "\n")
     cat("KDE plug-in Entropy:", kde_entropy_plugin, "\n")
     cat("Theoretical Entropy:", entropy_theor, "\n")
+    }
+
+    if (generate){
+          results <- data.frame(
+      theor_mean = theor_mean,
+      theor_variance = theor_variance,
+      theor_scale = theor_scale,
+      theor_entropy = entropy_theor,
+
+      data_n = sample_size,
+      data_mean = data_mean,
+      data_variance = data_variance,
+      data_scale = data_scale,
+      data_min = data_minimum,
+      data_max = data_maximum,
+      data_entropy_plugin = data_entropy_plugin,
+
+      KDE_mean = kde_mean,
+      KDE_variance_raw = kde_variance_raw,
+      KDE_variance_corrected = kde_variance_corrected,
+      KDE_scale_corrected = kde_scale_corrected,
+      KDE_entropy = entropy_kde,
+      KDE_entropy_plugin = kde_entropy_plugin,
+
+      Seed = seed
+    )
+    return(results)
+    }
+
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+temp <- gen_uni_normal(aMean = 10,aSD = 2,aN = 1000,aSeed = 123456)
+hist(temp)
+uni_normal_entropy(sd(temp)^2)
+c('NORMAL', 'HALFNORMAL', 'UNIFORM', 'TRIANGULAR', 'EXPONENTIAL', 'LAPLACE', 'LOGISTIC')
+
+
+
+
+
+NORMAL_data <- entropy_test(dist = "NORMAL",verbose = T, generate = T)
+HALFNORMAL_data  <- entropy_test(dist = "HALFNORMAL",verbose = T, generate = F)
+UNIFORM_data  <- entropy_test(dist = "UNIFORM",verbose = T, generate = F)
+TRIANGULAR_data  <- entropy_test(dist = "TRIANGULAR",verbose = T, generate = F)
+EXPONENTIAL_data  <- entropy_test(dist = "EXPONENTIAL",verbose = T, generate = F)
+LAPLACE_data  <- entropy_test(dist = "LAPLACE",verbose = T, generate = F)
+LOGISTIC_data  <- entropy_test(dist = "LOGISTIC",verbose = T, generate = F)
+
+str(NORMAL_data)
+str(HALFNORMAL_data)
+str(UNIFORM_data)
+
+
+NORMAL_data <- entropy_test(dist = "NORMAL", sample_size = 100000, seed = NA, verbose = FALSE)
+HALFNORMAL_data  <- entropy_test(dist = "HALFNORMAL", sample_size = 100000, seed = NA, verbose = FALSE)
+UNIFORM_data  <- entropy_test(dist = "UNIFORM", sample_size = 100000, seed = NA, verbose = FALSE)
+
+
+run_entropy_tests <- function(dists, sample_size = 100000, reps = 10, verbose = FALSE) {
+  results_list <- list()
+
+  for (dist in dists) {
+    mode_data <- data.frame()
+
+    for (i in 1:reps) {
+      seed_val <- sample.int(.Machine$integer.max, 1)
+      result <- entropy_test(dist = dist, sample_size = sample_size, seed = seed_val, verbose = verbose)
+
+      # Make sure Seed column exists and is populated
+      if (!"Seed" %in% names(result)) {
+        result$Seed <- seed_val
+      }
+
+      mode_data <- rbind(mode_data, result)
+    }
+
+    results_list[[paste0(dist, "_data")]] <- mode_data
+  }
+
+  return(results_list)
+}
+
+
+results <- run_entropy_tests(
+  dists = c("NORMAL", "HALFNORMAL", "UNIFORM"),
+  sample_size = 100000,
+  reps = 10,
+  verbose = FALSE
+)
+
+# Access each table
+NORMAL_data <- results$NORMAL_data
+HALFNORMAL_data <- results$HALFNORMAL_data
+UNIFORM_data <- results$UNIFORM_data
+
+
+
+
 
