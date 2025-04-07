@@ -1,6 +1,10 @@
 #these are super changes
 rm(list = ls())
 library(e1071)
+library(rlang)
+library(gramEvol)
+library(dplyr)
+
 
 .onLoad <- function(libname, pkgname) {
   required_packages <- c("moments", "gramEvol", "dplyr", "odbc", "DBI", "e1071", "parallel")
@@ -278,6 +282,7 @@ SymRegFitFunc <- function(expr) {
 
 }
 
+
 SymRegFitFunc4th <- function(expr) {
   result <- unlist(eval(parse(text = expr)))
 
@@ -287,7 +292,8 @@ SymRegFitFunc4th <- function(expr) {
   mean((grammar$target - result + runif(length(grammar$target), min = -target_bias, max = target_bias))^4)
 }
 
-SymRegFitFuncTitr <- function(expr) {
+
+SymRegFitFuncExp <- function(expr) {
   result <- unlist(eval(parse(text = expr)))
 
   if (any(is.nan(result))) {
@@ -295,7 +301,6 @@ SymRegFitFuncTitr <- function(expr) {
   }
   mean(exp(abs(grammar$target - result + runif(length(grammar$target), min = -target_bias, max = target_bias))))
 }
-
 
 
 SSE_eval_func <- function(expr, data) {
@@ -309,10 +314,6 @@ SSE_eval_func <- function(expr, data) {
   sum(abs(data$entropy - result)^2)
 }
 
-
-library(rlang)
-library(rlang)
-library(gramEvol)
 
 create_grammar_wrapper <- function(data,
                                    target,
@@ -385,74 +386,35 @@ create_grammar_wrapper <- function(data,
 
 
 
-
 symbolic_regression <- function(grammar) {
 
-  grammarDef <- grammar$grammarDef
-  data <- grammar$data
-  target_name <- grammar$target_name
-  target <- grammar$target
-  target_bias <- grammar$target_bias
-  variables <- grammar$variables
-  evalFunc <- grammar$evalFunc
-  environment(evalFunc) <- environment()
-  name <- grammar$name
-  termination_cost <- grammar$termination_cost
-  optimizer <- grammar$optimizer
-  iterations <- grammar$iterations
-  suggestions <- grammar$suggestions
-  mutationChance <- grammar$mutationChance
-  verbose <- grammar$verbose
-  target <- grammar$target
-  maxDepth <- grammar$maxDepth
+  with(grammar, {
+    evalFunc_name <- sample(names(evalFunc), 1)
+    evalFunc <- evalFunc[[evalFunc_name]]
+    environment(evalFunc) <- environment()
 
-
-  # Handle random optimizer
-  if (optimizer == "random") {
-    optimizer <- sample(c("es", "ga"), size = 1)
-    if (optimizer == "es") {
-      iterations <- iterations * 10
-      if (!is.null(suggestions)) {
-        suggestions <- suggestions[1, ]
-      }
+    if (optimizer == "random") {
+      optimizer <- sample(c("es", "ga"), 1)
+      iterations <- if (optimizer == "es") iterations * 10 else iterations
+      if (!is.null(suggestions) && optimizer == "es") suggestions <- suggestions[1, ]
     }
-  }
 
-  # Handle random mutation chance
-  if (!is.na(mutationChance) && mutationChance == "random") {
-    mutationChance <- runif(1, (
-      1 /
-        GrammarMaxSequenceLen(
-          grammar$grammarDef,
-          GrammarGetDepth(grammar$grammarDef),
-          GrammarStartSymbol(grammar$grammarDef)
-        )
-    ), 1)
-  }
+    if (!is.na(mutationChance) && mutationChance == "random") {
+      mutationChance <- runif(1, 1 / GrammarMaxSequenceLen(grammarDef, GrammarGetDepth(grammarDef), GrammarStartSymbol(grammarDef)), 1)
+    }
 
-  variables <- c(variables)
+    seed <- sample(1:2147483647, 1)
+    set.seed(seed)
 
-  seed <- round(runif(1, 1, 2147483647))
-  set.seed(seed)
+    results <- list()
+    results_table <- data.frame(
+      distribution = character(), optimizer = character(), expression = character(),
+      cost = numeric(), iterations = numeric(), mutationChance = numeric(), seed = numeric()
+    )
 
-  results <- list()
-  results_table <- data.frame(
-    distribution = character(),
-    optimizer = character(),
-    expression = character(),
-    cost = numeric(),
-    iterations = numeric(),
-    mutationChance = numeric(),
-    seed = numeric()
-  )
+    start_time <- Sys.time()
+    currentBest <- Inf
 
-  # Start runtime tracking
-  start_time <- Sys.time()
-  currentBest <- Inf
-
-
-
-    # Run Grammatical Evolution
     gramEvolution <- GrammaticalEvolution(
       grammarDef,
       suggestions = suggestions,
@@ -462,296 +424,134 @@ symbolic_regression <- function(grammar) {
       iterations = iterations,
       mutationChance = mutationChance,
       max.depth = maxDepth,
-      popSize = grammar$popSize,
+      popSize = popSize,
       monitorFunc = function(x) {
         if (x$best$cost < currentBest) {
           x$best$expressions <- gsub("data\\$", "", x$best$expressions)
-          if (verbose) {
-            print(x, show.genome = TRUE)
-          }
+          if (verbose) print(x, show.genome = TRUE)
           best_output <<- x
           currentBest <<- x$best$cost
-          currentBestExpressions <<- x$best$expressions
           results[[length(results) + 1]] <<- list(x)
 
           results_table <<- rbind(
             results_table,
             data.frame(
-              distribution = name,
-              optimizer = optimizer,
-              target = target_name,
-              expression = x$best$expressions,
-              cost = x$best$cost,
-              iterations = x$population$currentIteration,
-              trial = grammar$trial,
-              mutationChance = mutationChance,
-              `target_bias` = grammar$target_bias,
-              possible_funcs = grammar$functions,
-              possible_opers = grammar$operators,
-              possible_vars = paste(gsub("data\\$", "", grammar$variables),collapse=" "),
-              possible_cons = paste(grammar$constants),
-              maxDepth = maxDepth,
-              seed = seed
+              distribution = name, optimizer = optimizer, target = target_name,
+              expression = x$best$expressions, cost = x$best$cost, cost_funciton = evalFunc_name,
+              iterations = x$population$currentIteration, trial = trial, mutationChance = mutationChance,
+              target_bias = target_bias, possible_funcs = functions, possible_opers = operators,
+              possible_vars = paste(gsub("data\\$", "", variables), collapse = " "),
+              possible_cons = paste(constants), maxDepth = maxDepth,
+              genome = paste(x$best$genome, collapse = ", "), seed = seed
             )
           )
-          print(tail(results_table[2:6],1))
+          print(tail(results_table[2:6], 1))
         }
       }
     )
 
-    # End runtime tracking
-    end_time <- Sys.time()
-    runtime <- difftime(end_time, start_time, units = "secs")
-
-    # Extract best expression
-    best_expression <- gramEvolution$best$expression
+    runtime <- difftime(Sys.time(), start_time, units = "secs")
 
     output_table <- data.frame(
-      distribution = name,
-      optimizer = optimizer,
-      target = target_name,
-      best_expression = best_output$best$expressions,
-      best_cost = currentBest,
-      iterations = best_output$population$currentIteration,
-      trial = grammar$trial,
-      mutationChance = mutationChance,
-      `target_bias` = grammar$target_bias,
-      possible_funcs = grammar$functions,
-      possible_opers = grammar$operators,
-      possible_vars = paste(gsub("data\\$", "", grammar$variables),collapse=" "),
-      possible_cons = paste(grammar$constants),
-      maxDepth = maxDepth,
-      seed = seed,
-      runtime = runtime
+      distribution = name, optimizer = optimizer, target = target_name,
+      best_expression = best_output$best$expressions, best_cost = currentBest, cost_funciton = evalFunc_name,
+      iterations = best_output$population$currentIteration, trial = trial, mutationChance = mutationChance,
+      target_bias = target_bias, possible_funcs = functions, possible_opers = operators,
+      possible_vars = paste(gsub("data\\$", "", variables), collapse = " "),
+      possible_cons = paste(constants), maxDepth = maxDepth,
+      genome = paste(best_output$best$genome, collapse = ", "), seed = seed, runtime = runtime
     )
 
-    suggestions = matrix(c(currentBest, best_output[["best"]][["genome"]]), nrow = 1)
+    suggestions <- matrix(c(currentBest, best_output$best$genome), nrow = 1)
 
-  # Return results
-  return(list(
-    output_table = output_table,
-    results_table = results_table,
-    results = results,
-    best_genome = suggestions
-  ))
+    list(output_table = output_table, results_table = results_table, results = results, best_genome = suggestions)
+  })
 }
 
 
+par_sym_reg <- function(symbolic_regression, grammar, n_core = 4) {
 
-
-
-
-par_sym_reg <- function(symbolic_regression = symbolic_regression,
-                        grammar,
-                        n_core = 4) {
+  pad_suggestions <- function(grammar) {
+    reqSeqLen <- GrammarMaxSequenceLen(grammar$grammarDef, grammar$maxDepth, GrammarStartSymbol(grammar$grammarDef))
+    if (!is.null(grammar$suggestions) && ncol(grammar$suggestions) < reqSeqLen) {
+      padding <- matrix(0, nrow = nrow(grammar$suggestions), ncol = reqSeqLen - ncol(grammar$suggestions))
+      grammar$suggestions <- cbind(grammar$suggestions, padding)
+    }
+    grammar
+  }
 
   start_trial <- grammar$trial
 
-  # Loop over trials
   for (trial in start_trial:(start_trial + grammar$trials - 1)) {
 
-    print(trial)
+    grammar <- pad_suggestions(grammar)
+    grammar$trial <- trial
 
-    grammar$trial <- trial  # Update grammar$trial to current trial number
-
-    # Detect number of available cores and create cluster
     cl <- parallel::makeCluster(min(parallel::detectCores(), n_core))
-
-    # Replicate the grammar object across cores
     grammar_list <- replicate(n_core, grammar, simplify = FALSE)
 
-    # Export necessary functions to the cluster
-    parallel::clusterExport(
-      cl,
-      varlist = c("symbolic_regression"),
-      envir = environment()
-    )
+    parallel::clusterExport(cl, varlist = "symbolic_regression", envir = environment())
+    parallel::clusterEvalQ(cl, { library(gramEvol); library(rlang) })
 
-    # Load required packages on worker nodes
-    parallel::clusterEvalQ(cl, {
-      library(gramEvol)
-      library(rlang)
-    })
-
-    # Run symbolic_regression in parallel
-    opFromPar <- parallel::parLapply(
-      cl = cl,
-      X = grammar_list,
-      fun = function(g) symbolic_regression(g)
-    )
-
-    # Stop the cluster after execution
+    opFromPar <- parallel::parLapply(cl, grammar_list, symbolic_regression)
     parallel::stopCluster(cl)
 
-    # Extract best genomes
-    genome_list <- lapply(opFromPar, function(i) i$best_genome)
+    genome_matrix <- do.call(rbind, lapply(opFromPar, function(i) i$best_genome)) %>%
+      as.data.frame() %>%
+      arrange(V1) %>%
+      distinct(.keep_all = TRUE) %>%
+      slice_head(n = 5) %>%
+      select(-V1) %>%
+      as.matrix()
 
-    # Convert list of vectors into a matrix with 3 rows
-    genome_matrix <- as.matrix(
-      as.data.frame(do.call(rbind, genome_list)) %>%
-        arrange(V1) %>%
-        distinct(.keep_all = TRUE) %>%
-        slice_head(n = 5) %>%
-        select(-V1)
-    )
-
-    # Combine output tables
-    output_table <- do.call(rbind, lapply(opFromPar, function(i) i$output_table)) %>%
-      arrange(best_cost)
-
-    grammar$output <<- rbind(grammar$output, output_table)
-
-    # Combine results tables
-    results_table <- do.call(rbind, lapply(opFromPar, function(i) i$results_table)) %>%
-      arrange(cost)
-
-    grammar$results <<- rbind(grammar$results, results_table)
-
-    grammar$suggestions <<- genome_matrix
+    grammar$output <- rbind(grammar$output, do.call(rbind, lapply(opFromPar, `[[`, "output_table")) %>% arrange(best_cost))
+    grammar$results <- rbind(grammar$results, do.call(rbind, lapply(opFromPar, `[[`, "results_table")) %>% arrange(cost))
+    grammar$suggestions <- genome_matrix
   }
 
-  # After the loop, increment grammar$trial so next call knows it ran 4 trials
-  grammar$trial <<- start_trial + grammar$trials
+  grammar$trial <- start_trial + grammar$trials
 
-
-  # Return all outputs
-  return(list(
-    output_table = grammar$output,
-    results_table = grammar$result,
-    genome_matrix = genome_matrix,
-    output_raw = opFromPar
-  ))
+  return(grammar)
 }
 
 
-
-normal <- generate_distribution_metrics(1000,10000,dist_type = "normal")
-normal$var <- normal$sigma^2
 grammar <- create_grammar_wrapper(
-  data = normal,
-  target = "entropy",
+  data = nor,
+  target = "entropy_kde",
   target_bias = 0,
-  variables = c('var'),
-  evalFunc = SymRegFitFunc4th,
+  variables = c('kde_var'),
+  evalFunc <- list(
+    SymRegFitFunc = SymRegFitFunc
+  ),
   name = 'normal',
   iterations = 100,
-  trials = 1,
-  operators = c("-","+","/","*","^"),
-  functions = c("log","exp","sqrt"),
-  constants = c(1,2,pi),
+  trials = 4,
+  operators = c("-", "+", "/", "*", "^"),
+  functions = c("log", "exp", "sqrt"),
+  constants = c(.5, 1, 2, pi),
   optimizer = "ga",
   mutationChance = "random",
-  maxDepth = 5,popSize = 500
+  popSize = 100
 )
 
 # output <- symbolic_regression(grammar = grammar)
 # View(output$output_table)
+grammar <- par_sym_reg(
+  symbolic_regression = symbolic_regression,
+  grammar = grammar,
+  n_core = 12
+)
 
-grammar$popSize <- 500
-grammar$target_bias <- 0
+
+
+grammar$maxDepth <- 5
 parallel_results <- par_sym_reg(
   symbolic_regression = symbolic_regression,
   grammar = grammar,
   n_core = 12
 )
+
+
+
 View(grammar[["output"]])
 
-SymRegFitFuncTitr
-# grammar <- create_grammar_wrapper(
-#   data = temp,
-#   target = "entropy_kde",
-#   target_bias = .01,
-#   variables = c('data_mean', 'data_var', 'data_min', 'data_max'),
-#   evalFunc = SymRegFitFunc,
-#   name = 'uniform',
-#   iterations = 100,
-#   trials = 4,
-#   operators = c("-","+","/","*","^"),
-#   functions = c("log","exp","sqrt"),
-#   constants = c(1,2,pi),
-#   optimizer = "ga",
-#   mutationChance = "random"
-# )
-#
-# output <- symbolic_regression(grammar = grammar)
-# View(output$output_table)
-#
-#
-#
-# parallel_results <- par_sym_reg(
-#   symbolic_regression = symbolic_regression,
-#   grammar = grammar,
-#   n_core = 12
-# )
-
-
-# data <- generate_distribution_metrics(100, 1000000, "normal")
-#
-# grammarDef <- create_grammar_wrapper(data, variables = c('sigma'))
-#
-# output <-
-#   par_sym_reg(
-#     symbolic_regression = symbolic_regression,
-#     evalFunc = SymRegFitFunc,
-#     optimizer = 'random',
-#     grammarDef = grammarDef,
-#     data = data,
-#     iterations = 50,
-#     termination_cost = .1,
-#     mutationChance = "random",
-#     n_core = 15
-#   )
-#
-# output2 <-
-#   par_sym_reg(
-#     symbolic_regression = symbolic_regression,
-#     evalFunc = SymRegFitFunc,
-#     optimizer = 'random',
-#     grammarDef = grammarDef,
-#     data = data,
-#     iterations = 50,
-#     # termination_cost = .01,
-#     suggestions = output$genome_matrix,
-#     mutationChance = "random",
-#     n_core = 15
-#   )
-#
-#
-#
-#
-#
-# test <-
-#   symbolic_regression(
-#     grammarDef = grammarDef,
-#     evalFunc = SymRegFitFunc,
-#     iterations = 50,
-#     optimizer = 'ga',
-#     verbose = TRUE,
-#     termination_cost = .2
-#   )
-#
-# result <-
-#   symbolic_regression(
-#     grammarDef = grammarDef,
-#     evalFunc = SymRegFitFunc,
-#     iterations = 50,
-#     optimizer = 'ga',
-#     verbose = TRUE,
-#     termination_cost = .1,
-#     suggestions = matrix(test[["best_genome"]],nrow = 1)
-#   )
-
-
-# # GIT CLONE HELPER:
-# cd path\to\folder  # Navigate to the target directory
-# git clone https://github.com/AaronRoseDA/srlib.git  # Clone the repository
-# cd srlib  # Move into the cloned repo directory
-#
-#
-# # GIT PUSH HELPER:
-# cd srlib
-# git remote set-url origin https://github.com/AaronRoseDA/srlib.git  # Set remote origin (only needed if not set)
-# git pull origin main  # Ensure your local branch is up-to-date
-# git add .  # Stage all changes
-# git commit -m "Added symbolic_regression function"  # Commit changes
-# git push origin main  # Push to the main branch

@@ -1,27 +1,4 @@
-##### ---- ROXYGEN ---- #####
-#' Create a Database Connection
-#'
-#' This function establishes a connection to an Azure SQL Server database
-#' using the provided user credentials.
-#'
-#' @param user_name A string specifying the database username.
-#' @param password A string specifying the database password.
-#'
-#' @return A database connection object (`DBI::dbConnect`) if the connection is successful.
-#'         If the connection fails, returns NULL and prints an error message.
-#'
-#' @examples
-#' # Create a database connection
-#' con <- create_db_connection("your_username", "your_password")
-#'
-#' # Use the connection to interact with the database
-#' if (!is.null(con)) {
-#'   dbListTables(con)  # List available tables
-#'   dbDisconnect(con)  # Close the connection when done
-#' }
-#'
-#' @export
-#####
+
 create_db_connection <- function(user_name, password) {
   con <- tryCatch({
     dbConnect(odbc::odbc(),
@@ -56,45 +33,13 @@ con <- dbConnect(odbc::odbc(),
                  Server   = "symregserver.database.windows.net",
                  Database = "SymReg",
                  UID      = "AaronRose",   # Not your Gmail
-                 PWD      = "UWSP2025symreg!",
+                 PWD      = "----2025------!",
                  Encrypt  = "yes",
                  TrustServerCertificate = "no",
                  Timeout  = 30)
 
+dbDisconnect(conn = con)
 
-
- ##### ---- ROXYGEN ---- #####
-#' Append or Replace Data in a Database Table
-#'
-#' This function appends or replaces data in an existing database table.
-#' If the table does not exist, it prompts the user to select from available tables.
-#' The function also ensures that the `DATE_INSERTED` column is updated if required.
-#'
-#' @param connection A valid database connection object.
-#' @param table_name A string specifying the name of the table to append or replace data in.
-#' @param data A data frame containing the data to be inserted.
-#' @param verbose A logical value (default: FALSE). If TRUE, prints a confirmation message upon successful insertion.
-#' @param DATE_INSERTED A logical value (default: TRUE). If TRUE, updates or adds a `DATE_INSERTED` column
-#'        to match the current timestamp before insertion.
-#' @param mode A string specifying the insertion mode. Must be either "append" (default) or "replace".
-#'        "append" adds the data to the table, while "replace" clears the table before inserting new data.
-#'
-#' @return NULL. The function appends or replaces data in the specified table and prints messages based on user input.
-#'
-#' @examples
-#' # Append data to an existing table
-#' df <- data.frame(ID = 6:10, Name = c("F", "G", "H", "I", "J"))
-#' append_to_table(my_connection, table_name = "ExistingTable", data = df)
-#'
-#' # Replace all data in an existing table
-#' new_data <- data.frame(ID = 1:5, Name = c("A", "B", "C", "D", "E"))
-#' append_to_table(my_connection, table_name = "ExistingTable", data = new_data, mode = "replace")
-#'
-#' # Append data with verbose output
-#' append_to_table(my_connection, table_name = "ExistingTable", data = df, verbose = TRUE)
-#'
-#' @export
-#####
 append_to_table <- function(connection, table_name, data, verbose = FALSE, DATE_INSERTED = TRUE, mode = "append") {
 
   # Validate mode
@@ -143,35 +88,7 @@ append_to_table <- function(connection, table_name, data, verbose = FALSE, DATE_
   if (verbose) cat("Data successfully ", mode, "ed into table: ", table_name, "\n",sep = "")
 }
 
-##### ---- ROXYGEN ---- #####
-#' Create or Update a Table in a Database
-#'
-#' This function creates a new table in a database based on the structure of a provided data frame.
-#' If the table already exists, the user is prompted to either append or replace the data.
-#'
-#' @param connection A valid database connection object.
-#' @param table_name A string specifying the name of the table to be created or updated.
-#' @param table A data frame defining the structure of the table. If the data frame contains rows, they will be inserted into the database.
-#' @param DATE_INSERTED A logical value (default: TRUE). If TRUE, ensures a `DATE_INSERTED` column exists in the database
-#'        and updates all its values to the current timestamp before insertion.
-#'
-#' @return NULL. The function creates or updates a table and prints confirmation messages.
-#'
-#' @examples
-#' # Create a new table with data
-#' df <- data.frame(ID = 1:5, Name = c("A", "B", "C", "D", "E"))
-#' create_table(my_connection, table_name = "NewTable", table = df)
-#'
-#' # Create an empty table
-#' empty_df <- data.frame(ID = integer(), Name = character())
-#' create_table(my_connection, table_name = "EmptyTable", table = empty_df)
-#'
-#' # Append or replace data in an existing table
-#' new_data <- data.frame(ID = 6:10, Name = c("F", "G", "H", "I", "J"))
-#' create_table(my_connection, table_name = "NewTable", table = new_data)
-#'
-#' @export
-#####
+
 create_table <- function(connection, table_name, table, DATE_INSERTED = TRUE) {
   # connection <-  con
   # table_name <- "input_NORMAL"
@@ -218,34 +135,7 @@ create_table <- function(connection, table_name, table, DATE_INSERTED = TRUE) {
   }
 }
 
-##### ---- ROXYGEN ---- #####
-#' Delete Tables or Views from a Database
-#'
-#' This function deletes specified tables or views from a database. If no items are provided,
-#' it lists all objects of the specified type (`mode`) and prompts the user for confirmation before deletion.
-#'
-#' @param connection A valid database connection object.
-#' @param items A character vector specifying the names of tables or views to delete.
-#'        If NULL, the function retrieves all objects of the specified mode and prompts the user before deletion.
-#' @param mode A string specifying the type of object to delete. Must be either "table" or "view".
-#'
-#' @return NULL. The function performs deletions interactively and prints confirmation messages.
-#'
-#' @examples
-#' # Delete specific tables
-#' delete_db_items(my_connection, items = c("Table1", "Table2"), mode = "table")
-#'
-#' # Delete specific views
-#' delete_db_items(my_connection, items = c("View1", "View2"), mode = "view")
-#'
-#' # Delete all tables (asks for confirmation for each)
-#' delete_db_items(my_connection, mode = "table")
-#'
-#' # Delete all views (asks for confirmation for each)
-#' delete_db_items(my_connection, mode = "view")
-#'
-#' @export
-#####
+
 delete_db_items <- function(connection, items = NULL, mode) {
 
   # Validate mode
@@ -320,43 +210,7 @@ delete_db_items <- function(connection, items = NULL, mode) {
   cat("Deletion process completed.\n")
 }
 
-##### ---- ROXYGEN ---- #####
-#' Retrieve a Table or Summary from a Database
-#'
-#' This function fetches data from a specified table in the database,
-#' with options to retrieve all rows, a specified number of rows,
-#' or a summary of all tables in the database.
-#'
-#' @param connection A valid database connection object.
-#' @param table A string specifying the name of the table to retrieve.
-#'        If `summary = TRUE`, this parameter is ignored.
-#' @param n_rows An optional integer specifying the number of rows to retrieve.
-#'        If NULL, the function returns the full table.
-#' @param summary A logical value (default: FALSE). If TRUE, the function
-#'        returns a list of all tables in the database, each with its
-#'        first 4 rows, and ignores the `table` and `n_rows` parameters.
-#' @param verbose A logical value (default: FALSE). If TRUE, prints the
-#'        first few rows of the requested table or summary list for reference.
-#'
-#' @return A data frame containing the requested table data if `summary = FALSE`,
-#'         or a named list of data frames containing the first 4 rows of each table
-#'         in the database if `summary = TRUE`.
-#'
-#' @examples
-#' # Retrieve the full table
-#' df <- get_db_table(my_connection, table = "SalesData")
-#'
-#' # Retrieve the first 50 rows and print structure
-#' df <- get_db_table(my_connection, table = "SalesData", n_rows = 50)
-#'
-#' # Get a summary of all tables (first 4 rows of each)
-#' summary_list <- get_db_table(my_connection, summary = TRUE)
-#'
-#' # Retrieve table with verbose output
-#' df <- get_db_table(my_connection, table = "SalesData", verbose = TRUE)
-#'
-#' @export
-#####
+
 get_db_table <- function(connection, table = NULL, n_rows = NULL, summary = FALSE, verbose = FALSE) {
 
   # If summary = TRUE, ignore table & n_rows and return all tables with first 10 rows
@@ -422,18 +276,17 @@ get_db_table <- function(connection, table = NULL, n_rows = NULL, summary = FALS
 
 
 
-create_table(con, "input_NORMAL", NORMAL_data, DATE_INSERTED = FALSE)
-create_table(con, "input_HALFNORMAL", HALFNORMAL_data, DATE_INSERTED = FALSE)
-create_table(con, "input_UNIFORM", uniform, DATE_INSERTED = FALSE)
 
-
-append_to_table(con, "input_NORMAL", NORMAL_data, DATE_INSERTED = FALSE)
-append_to_table(con, "input_HALFNORMAL", HALFNORMAL_data, DATE_INSERTED = FALSE)
-append_to_table(con, "input_UNIFORM", UNIFORM_data, DATE_INSERTED = FALSE)
-
-get_db_table(connection = con, summary = T)
-
-
+delete_db_items(con,items = "input_NORMAL",mode = "table")
 delete_db_items(con,items = "input_UNIFORM",mode = "table")
-create_table(con, "input_UNIFORM", uniform, DATE_INSERTED = FALSE)
-temp <- get_db_table(connection = con, table = "input_UNIFORM", summary = F)
+delete_db_items(con,items = "input_TRIANGULAR",mode = "table")
+create_table(con, "input_TRIANGULAR", tri, DATE_INSERTED = FALSE)
+nor[sapply(nor, is.infinite)] <- NA
+create_table(con, "input_NORMAL", nor, DATE_INSERTED = FALSE)
+create_table(con, "input_UNIFORM", uni, DATE_INSERTED = FALSE)
+
+
+
+
+
+
