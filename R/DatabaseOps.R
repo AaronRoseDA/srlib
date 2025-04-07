@@ -44,20 +44,26 @@ create_db_connection <- function(user_name, password) {
   return(con)
 }
 
+
+
+library(odbc)
+library(DBI)
+library(RODBC)
+
+
 con <- dbConnect(odbc::odbc(),
-                 Driver = "{ODBC Driver 18 for SQL Server}",
-                 Server = "symregserver.database.windows.net",
+                 Driver   = "ODBC Driver 18 for SQL Server",
+                 Server   = "symregserver.database.windows.net",
                  Database = "SymReg",
-                 Authentication = "ActiveDirectoryInteractive",
-                 Encrypt = "yes",
+                 UID      = "AaronRose",   # Not your Gmail
+                 PWD      = "UWSP2025symreg!",
+                 Encrypt  = "yes",
                  TrustServerCertificate = "no",
-                 Timeout = 30)
+                 Timeout  = 30)
 
 
 
-
-
-##### ---- ROXYGEN ---- #####
+ ##### ---- ROXYGEN ---- #####
 #' Append or Replace Data in a Database Table
 #'
 #' This function appends or replaces data in an existing database table.
@@ -418,7 +424,7 @@ get_db_table <- function(connection, table = NULL, n_rows = NULL, summary = FALS
 
 create_table(con, "input_NORMAL", NORMAL_data, DATE_INSERTED = FALSE)
 create_table(con, "input_HALFNORMAL", HALFNORMAL_data, DATE_INSERTED = FALSE)
-create_table(con, "input_UNIFORM", UNIFORM_data, DATE_INSERTED = FALSE)
+create_table(con, "input_UNIFORM", uniform, DATE_INSERTED = FALSE)
 
 
 append_to_table(con, "input_NORMAL", NORMAL_data, DATE_INSERTED = FALSE)
@@ -426,7 +432,8 @@ append_to_table(con, "input_HALFNORMAL", HALFNORMAL_data, DATE_INSERTED = FALSE)
 append_to_table(con, "input_UNIFORM", UNIFORM_data, DATE_INSERTED = FALSE)
 
 get_db_table(connection = con, summary = T)
-temp <- get_db_table(connection = con, table = "input_NORMAL", summary = F)
 
 
-
+delete_db_items(con,items = "input_UNIFORM",mode = "table")
+create_table(con, "input_UNIFORM", uniform, DATE_INSERTED = FALSE)
+temp <- get_db_table(connection = con, table = "input_UNIFORM", summary = F)
