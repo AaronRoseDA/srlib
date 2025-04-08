@@ -24,16 +24,13 @@ create_db_connection <- function(user_name, password) {
 
 
 library(odbc)
-library(DBI)
-library(RODBC)
-
 
 con <- dbConnect(odbc::odbc(),
                  Driver   = "ODBC Driver 18 for SQL Server",
                  Server   = "symregserver.database.windows.net",
                  Database = "SymReg",
                  UID      = "AaronRose",   # Not your Gmail
-                 PWD      = "----2025------!",
+                 PWD      = "-2025-g!",
                  Encrypt  = "yes",
                  TrustServerCertificate = "no",
                  Timeout  = 30)

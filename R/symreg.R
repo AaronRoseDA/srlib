@@ -436,13 +436,24 @@ symbolic_regression <- function(grammar) {
           results_table <<- rbind(
             results_table,
             data.frame(
-              distribution = name, optimizer = optimizer, target = target_name,
-              expression = x$best$expressions, cost = x$best$cost, cost_funciton = evalFunc_name,
-              iterations = x$population$currentIteration, trial = trial, mutationChance = mutationChance,
-              target_bias = target_bias, possible_funcs = functions, possible_opers = operators,
+              distribution = name,
+              optimizer = optimizer,
+              target = target_name,
+              expression = x$best$expressions,
+              cost = x$best$cost,
+              cost_funciton = evalFunc_name,
+              iterations = x$population$currentIteration,
+              trial = trial,
+              mutationChance = mutationChance,
+              target_bias = target_bias,
+              possible_funcs = functions,
+              possible_opers = operators,
               possible_vars = paste(gsub("data\\$", "", variables), collapse = " "),
-              possible_cons = paste(constants), maxDepth = maxDepth,
-              genome = paste(x$best$genome, collapse = ", "), seed = seed
+              possible_cons = paste(constants),
+              maxDepth = maxDepth,
+              genome = paste(x$best$genome, collapse = ", "),
+              seed = seed,
+              date = Sys.time()
             )
           )
           print(tail(results_table[2:6], 1))
@@ -453,13 +464,25 @@ symbolic_regression <- function(grammar) {
     runtime <- difftime(Sys.time(), start_time, units = "secs")
 
     output_table <- data.frame(
-      distribution = name, optimizer = optimizer, target = target_name,
-      best_expression = best_output$best$expressions, best_cost = currentBest, cost_funciton = evalFunc_name,
-      iterations = best_output$population$currentIteration, trial = trial, mutationChance = mutationChance,
-      target_bias = target_bias, possible_funcs = functions, possible_opers = operators,
+      distribution = name,
+      optimizer = optimizer,
+      target = target_name,
+      best_expression = best_output$best$expressions,
+      best_cost = currentBest,
+      cost_funciton = evalFunc_name,
+      iterations = best_output$population$currentIteration,
+      trial = trial,
+      mutationChance = mutationChance,
+      target_bias = target_bias,
+      possible_funcs = functions,
+      possible_opers = operators,
       possible_vars = paste(gsub("data\\$", "", variables), collapse = " "),
-      possible_cons = paste(constants), maxDepth = maxDepth,
-      genome = paste(best_output$best$genome, collapse = ", "), seed = seed, runtime = runtime
+      possible_cons = paste(constants),
+      maxDepth = maxDepth,
+      genome = paste(best_output$best$genome, collapse = ", "),
+      seed = seed,
+      date = Sys.time(),
+      runtime = runtime
     )
 
     suggestions <- matrix(c(currentBest, best_output$best$genome), nrow = 1)
@@ -510,28 +533,46 @@ par_sym_reg <- function(symbolic_regression, grammar, n_core = 4) {
   }
 
   grammar$trial <- start_trial + grammar$trials
+  grammar$best_output <- grammar$output %>%
+    group_by(trial) %>%
+    slice_min(best_cost, with_ties = FALSE) %>%
+    ungroup()
+
+  last_10 <- grammar$best_output %>%
+    arrange(desc(trial)) %>%
+    slice_head(n = 10)
+
+  if (nrow(last_10) == 10 && length(unique(last_10$best_expression)) == 1) {
+    if (grammar$maxDepth < 7) {
+      grammar$maxDepth <- grammar$maxDepth + 1
+      message("maxDepth increased to ", grammar$maxDepth)
+    } else {
+      message("maxDepth already at maximum (6). No change.")
+    }
+  }
+
 
   return(grammar)
 }
 
 
 grammar <- create_grammar_wrapper(
-  data = nor,
+  data = tri,
   target = "entropy_kde",
   target_bias = 0,
-  variables = c('kde_var'),
+  variables = c('kde_var','data_var', 'data_skew', 'data_min', 'data_max'),
   evalFunc <- list(
     SymRegFitFunc = SymRegFitFunc
   ),
-  name = 'normal',
-  iterations = 100,
-  trials = 4,
+  name = 'triangular',
+  iterations = 250,
+  trials = 20,
   operators = c("-", "+", "/", "*", "^"),
   functions = c("log", "exp", "sqrt"),
   constants = c(.5, 1, 2, pi),
   optimizer = "ga",
   mutationChance = "random",
-  popSize = 100
+  popSize = 250
 )
 
 # output <- symbolic_regression(grammar = grammar)
@@ -542,7 +583,26 @@ grammar <- par_sym_reg(
   n_core = 12
 )
 
+test <- grammar$output %>% arrange(best_cost, )
 
+test <- grammar$output %>%
+  group_by(across(-c(date, runtime,iterations,seed))) %>%
+  summarize(
+    date = min(date),
+    runtime = min(runtime),
+    iterations = min(iterations),
+    .groups = "drop"
+  )
+library(dplyr)
+
+test <- grammar$output %>%
+  group_by(trial) %>%
+  slice_min(best_cost, with_ties = FALSE) %>%
+  ungroup()
+
+
+
+with(grammar, GrammarGetDepth(grammarDef))
 
 grammar$maxDepth <- 5
 parallel_results <- par_sym_reg(
@@ -551,6 +611,7 @@ parallel_results <- par_sym_reg(
   n_core = 12
 )
 
+export <- grammar$output %>% distinct(best_expression, .keep_all = TRUE)
 
 
 View(grammar[["output"]])
