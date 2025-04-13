@@ -742,6 +742,82 @@ exper_bivariate_normal <- function(aN, aGrid, mu_vec, sigma_vec, rho = 0, showAl
   return(rbind(x_row, y_row, xy_row))
 }
 
+exper_bivariate_skew_normal <- function(aN, aGrid, xi_vec, omega_vec, alpha_vec, rho = 0, showAll = TRUE) {
+  seed_used <- sample.int(.Machine$integer.max, 1)
+  set.seed(seed_used)
+  time_start <- Sys.time()
+
+  # Theoretical moments
+  delta_vec <- alpha_vec / sqrt(1 + alpha_vec^2)
+  theor_mean_vec <- xi_vec + omega_vec * delta_vec * sqrt(2 / pi)
+  theor_var_vec <- omega_vec^2 * (1 - (2 * delta_vec^2) / pi)
+  theor_skew_vec <- uni_skew_normal_skew(alpha_vec)
+
+  cov_xy <- rho * sqrt(theor_var_vec[1]) * sqrt(theor_var_vec[2])
+
+  theor_moments_x <- set_theor_moments(theor_mean_vec[1], theor_var_vec[1], theor_skew_vec[1], -Inf, Inf)
+  theor_moments_y <- set_theor_moments(theor_mean_vec[2], theor_var_vec[2], theor_skew_vec[2], -Inf, Inf)
+
+  # Generate skew-normal data using sn::rmsn
+  dp <- list(xi = xi_vec,
+             Omega = matrix(c(omega_vec[1]^2, cov_xy, cov_xy, omega_vec[2]^2), ncol = 2),
+             alpha = alpha_vec)
+
+  data <- sn::rmsn(aN, dp = dp)
+
+  # Empirical statistics
+  data_corr <- cor(data[, 1], data[, 2])
+  data_cov <- cov(data)[1, 2]
+  data_moments_x <- calc_sample_moments(data[, 1])
+  data_moments_y <- calc_sample_moments(data[, 2])
+  kde_moments <- calc_kde_moments_2d(data, aGrid)
+
+  # Theoretical entropies
+  entropy_theor_x <- uni_skew_normal_entropy(xi_vec[1], omega_vec[1], alpha_vec[1])
+  entropy_theor_y <- uni_skew_normal_entropy(xi_vec[2], omega_vec[2], alpha_vec[2])
+  entropy_theor_joint <- NA
+
+  # Plugin entropy estimates (normal approximation)
+  entropy_plugin_x <- uni_normal_entropy(data_moments_x[["var"]])
+  entropy_plugin_y <- uni_normal_entropy(data_moments_y[["var"]])
+  entropy_plugin_joint <- log(2 * pi * exp(1)) + 0.5 * log(det(cov(data)))
+
+  if (showAll) {
+    cat("\nX-axis statistics:\n")
+    showStats(aN, theor_moments_x, data_moments_x, kde_moments, entropy_plugin_x, NA, entropy_theor_x)
+
+    cat("\nY-axis statistics:\n")
+    showStats(aN, theor_moments_y, data_moments_y, kde_moments, entropy_plugin_y, NA, entropy_theor_y)
+
+    cat("\nJoint statistics (XY):\n")
+    cat(sprintf("Plugin joint entropy: %.4f\n", entropy_plugin_joint))
+    cat(sprintf("Empirical correlation: %.4f\n", data_corr))
+  }
+
+  time_end <- Sys.time()
+  duration_sec <- as.numeric(difftime(time_end, time_start, units = "secs"))
+
+  # Assemble rows
+  x_row <- make_bivariate_x_row(
+    seed_used, aN, time_start, time_end, duration_sec,
+    theor_moments_x, data_moments_x, kde_moments,
+    entropy_plugin_x, entropy_theor_x
+  )
+
+  y_row <- make_bivariate_y_row(
+    seed_used, aN, time_start, time_end, duration_sec,
+    theor_moments_y, data_moments_y, kde_moments,
+    entropy_plugin_y, entropy_theor_y
+  )
+
+  xy_row <- make_bivariate_xy_row(
+    seed_used, aN, time_start, time_end, duration_sec, kde_moments,
+    entropy_plugin_joint, entropy_theor_joint,
+    rho, cov_xy, data_corr, data_cov
+  )
+
+  return(rbind(x_row, y_row, xy_row))
+}
 
 run_simulations <- function(param_grid, n_sim = 10, aDist) {
   do.call(rbind, lapply(1:nrow(param_grid), function(i) {
@@ -876,6 +952,22 @@ set_normal_param_bivariate <- function() {
   return(list(m1_vals,m2_vals,m3_vals,m4_vals,m5_vals,
               m6_vals,m7_vals,m8_vals,m9_vals,m10_vals,m11_vals))
 
+}
+
+set_skew_normal_param_bivariate <- function() {
+  xi_x_vals <- c(0, 2, 4)       # location for x, xi
+  omega_x_vals <- c(2, 4, 6)    # scale for x, omega
+  alpha_x_vals <- c(-2, 0, 2)   # shape for x, alpha
+
+  xi_y_vals <- c(1, 3, 5)       # location for y, xi
+  omega_y_vals <- c(3, 5, 7)    # scale for y, omega
+  alpha_y_vals <- c(-1.5, 0, 1.5) # shape for y, alpha
+
+  rho_vals <- c(0, 0.5, 0.9)    # correlation values
+
+  return(list(xi_x_vals, omega_x_vals, alpha_x_vals,
+              xi_y_vals, omega_y_vals, alpha_y_vals,
+              rho_vals))
 }
 
 #####################################################################
